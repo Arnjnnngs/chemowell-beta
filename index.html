@@ -990,7 +990,7 @@ function renderMedsyncScreen(now) {
 const CONFIG = { patientName: 'Brandi', ceilingMg: 2500, tempUnit: 'Fahrenheit' };
 // v43: index.html carried no version constant. The printable record states which build
 // produced it, and a release check needs one place to compare against sw.js's cache key.
-const APP_VERSION = 'beta-v49'; // derived from care-tracker v49
+const APP_VERSION = 'beta-v51'; // derived from care-tracker v51
 
 // State
 const initialMedicationConfig = loadMedicationConfig();
@@ -1629,6 +1629,23 @@ function fmtCyclePeriod(p) {
 const BOWEL_ISSUE_VALUES = new Set(['none', 'diarrhea']);
 const BOWEL_MOVEMENT_LABELS = { normal: 'Normal', very_little: 'Very little', none: 'None', diarrhea: 'Diarrhea' };
 function yesterdayStart(now) { return dayStart(now) - 86400000; }
+
+// ---- END-OF-DAY CHECK-INS (bowel movement, appetite) ----
+// These two are asked about TODAY, and only once the day is effectively over. 18:00 is not a new
+// number: dailyAlertLevel() already treats it as the urgent threshold, so this reuses the app's
+// own established end-of-day boundary rather than inventing a second one.
+// Before this, both asked about YESTERDAY from midnight onward -- so the first thing the app said
+// each morning was a question about a day that had already gone. A day's answer is only complete
+// once the day is.
+const EOD_HOUR = 18;   // the card appears
+const EOD_URGENT = 21; // and turns urgent
+function eodActive(now) { return new Date(now).getHours() >= EOD_HOUR; }
+function eodAlertLevel(now) {
+  const hr = new Date(now).getHours();
+  if (hr >= EOD_URGENT) return 2;
+  if (hr >= EOD_HOUR) return 1;
+  return 0;
+}
 // Shared "must be answered today" escalation rules — quiet reminder in the morning, firmer by
 // afternoon, urgent by evening. Used by the Daily Weight, Bowel Movement, and Appetite Home
 // alerts so all three escalate identically rather than each having its own copy of the logic.
@@ -2594,6 +2611,27 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
   }
   const bannerItems = bannerItemsAll.filter(m => m.ts > (state.missedClearedAt || 0));
 
+  // MEDICATION LISTS DISAGREE AND NOBODY HAS CHOSEN YET.
+  // v46 shipped shared medication settings, but nothing changes until a choice is made, and the
+  // chooser lived only on a card partway down the Medications screen. Aaron reported the two
+  // phones "still not syncing" -- they were waiting on him, and nothing ever said so.
+  // Uses medsyncCandidates(), the SAME source the Medications card uses: no second definition of
+  // "the phones disagree". Renders nothing until the prefs snapshot lands, so an offline phone
+  // shows no warning it cannot act on.
+  if (state.medsync && state.medsync.devices && !state.medsync.sharedJson) {
+    const mineId = medsyncDeviceId();
+    const otherPhones = medsyncCandidates().filter(function (c) { return c.id !== mineId; });
+    if (otherPhones.length) {
+      parts.push(h('div', { 'data-medsync-home-prompt': 'true', style: { display: 'flex', alignItems: 'flex-start', gap: '10px', background: 'rgba(199,120,0,0.14)', border: '1px solid rgba(199,120,0,0.45)', borderRadius: '15px', padding: '12px 13px' } },
+        h('span', { style: { flexShrink: '0', width: '22px', height: '22px', borderRadius: '50%', background: '#C77800', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px' } }, '!'),
+        h('span', { style: { flex: '1', minWidth: '0' } },
+          h('span', { style: { display: 'block', fontSize: '13.5px', fontWeight: '800', color: '#7A5313', lineHeight: '1.35' } }, 'The two phones have different medication lists'),
+          h('span', { style: { display: 'block', fontSize: '12.5px', color: '#7A5313', lineHeight: '1.4', marginTop: '3px' } }, 'Until you pick which list both should use, each phone keeps its own — which is why a dose can look due on one and not the other.'),
+          h('button', { 'data-medsync-open': 'true', type: 'button', onClick: medsyncGoChooser, style: { marginTop: '10px', minHeight: '44px', padding: '0 14px', borderRadius: '11px', background: '#C77800', color: '#fff', fontSize: '13.5px', fontWeight: '800' } }, 'Compare the two lists')
+        )
+      ));
+    }
+  }
   // BETA BANNER, pinned to the top of Home, above the write-failure banner and everything else.
   // The badge added below lives in the drawer footer -- which a tester never opens. The isolation
   // suite caught exactly that: 8/9 with "no BETA badge found", on a build that was otherwise
@@ -2682,12 +2720,11 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
   // Bowel Issue active banner — non-dismissible, pinned like Period/In-Patient. Stays up until
   // a Normal/Very little answer is logged for the day driving the streak (usually "today" or
   // "yesterday" depending on whether a Symptoms entry or the retrospective alert started it).
-  // Always shows its own inline control — the retrospective "Bowel Movement" alert directly below
-  // only ever appears when YESTERDAY is unanswered, and this banner's bannerDay can only equal
-  // yesterday once yesterday already has an entry, so the two controls' visible windows never
-  // actually overlap (v54 note: prior to the Bowel Movement alert hiding-once-answered redesign,
-  // this banner used to defer to a card that was always on screen; that card no longer always
-  // renders, so deferring to it is no longer valid and this banner must always show its own control).
+  // Always shows its own inline control. NOTE (v51): the two controls CAN now be on screen at the
+  // same time — after 18:00 the Bowel Movement card below asks about TODAY while this banner may
+  // still be labelled with an earlier day. That is why both are explicitly day-labelled: this one
+  // says "Update status for <day>" and the card names today outright. Logging today from either
+  // one moves bannerDay to today, after which only this banner remains.
   if (bowelIssueActive()) {
     const bIssueType = currentBowelIssueType();
     const bDayN = daysSinceBowelIssueStart();
@@ -2722,19 +2759,22 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
     ));
   }
 
-  // Bowel Movement retrospective check-in — persistent on Home until answered for YESTERDAY,
-  // escalating urgency through the day using the same rules as Daily Weight below. Disappears
-  // entirely once yesterday's entry exists; the answer then lives in Reports > Bowel Movement.
+  // Bowel Movement END-OF-DAY check-in — asks about TODAY, and only from 18:00 (eodActive).
+  // Firm at 18:00, urgent at 21:00. Before v51 this asked about YESTERDAY from midnight onward,
+  // which made the first thing the app said each morning a question about a day already gone.
+  // Disappears once today's entry exists; the answer then lives in Reports > Bowel Movement.
   // To correct a wrong answer after it's been logged, remove it from that Reports history list —
-  // this alert reappears immediately since the day is unanswered again.
+  // this alert reappears immediately (if it is still after 18:00) since the day is unanswered again.
+  // TRADE, deliberate: this was also the only route to answering a MISSED day. A day that ends
+  // unanswered now stays unanswered — see STATUS.md.
   {
-    const bmYStart = yesterdayStart(now);
+    const bmYStart = dayStart(now);
     const bmYEntry = bowelMovementFor(bmYStart);
-    if (!bmYEntry) {
-      const level = dailyAlertLevel(now);
+    if (!bmYEntry && eodActive(now)) {
+      const level = eodAlertLevel(now);
       const s = dailyAlertStyle(level);
-      const bmYLabel = new Date(bmYStart).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
-      const bmMsg = level === 2 ? ('Still not logged for ' + bmYLabel + ' — please answer before the day ends.') : level === 1 ? ('No bowel movement status logged for ' + bmYLabel + ' yet.') : (bmYLabel + '’s bowel movement hasn’t been logged yet.');
+      const bmMsg = level === 2 ? 'Still not logged for today — please answer before the day ends.'
+                                : 'Today’s bowel movement hasn’t been logged yet.';
       const bmSelectValue = state.bowelInput !== undefined ? state.bowelInput : '';
       parts.push(h('div', { style: { background: s.bg, border: s.border, borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: s.shadow } },
         h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
@@ -2758,17 +2798,17 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
     }
   }
 
-  // Appetite retrospective check-in — same persistent/escalating rules as Bowel Movement and
-  // Daily Weight, asking about YESTERDAY. Disappears once answered; the answer lands in
-  // Reports > Appetite (history-only there — no separate input card on that page).
+  // Appetite END-OF-DAY check-in — same rules as the Bowel Movement card directly above: asks
+  // about TODAY, appears only from 18:00, urgent from 21:00. Disappears once answered; the answer
+  // lands in Reports > Appetite (history-only there — no separate input card on that page).
   {
-    const apYStart = yesterdayStart(now);
+    const apYStart = dayStart(now);
     const apYEntry = appetiteFor(apYStart);
-    if (!apYEntry) {
-      const level = dailyAlertLevel(now);
+    if (!apYEntry && eodActive(now)) {
+      const level = eodAlertLevel(now);
       const s = dailyAlertStyle(level);
-      const apYLabel = new Date(apYStart).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
-      const apMsg = level === 2 ? ('Still not logged for ' + apYLabel + ' — please answer before the day ends.') : level === 1 ? ('No appetite status logged for ' + apYLabel + ' yet.') : (apYLabel + '’s appetite hasn’t been logged yet.');
+      const apMsg = level === 2 ? 'Still not logged for today — please answer before the day ends.'
+                                : 'Today’s appetite hasn’t been logged yet.';
       const apSelectValue = state.appetiteInput !== undefined ? state.appetiteInput : '';
       const apNoteValue = state.appetiteNoteInput !== undefined ? state.appetiteNoteInput : '';
       parts.push(h('div', { style: { background: s.bg, border: s.border, borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: s.shadow } },
@@ -3450,9 +3490,9 @@ function reportDescriptor(type, now) {
     const bLatest = bEntries[0];
     return { label: 'Bowel Movement', icon: 'notes', description: 'Review bowel movement history logged from Home.', meta: bLatest ? ((BOWEL_MOVEMENT_LABELS[bLatest.value] || bLatest.value) + ' most recent') : 'No entries yet' };
   }
-  const yStart = yesterdayStart(now);
+  const yStart = dayStart(now);
   const yEntry = appetiteFor(yStart);
-  return { label: 'Appetite', icon: 'notes', description: 'Review appetite history logged from Home.', meta: yEntry ? ((APPETITE_LABELS[yEntry.value] || yEntry.value) + ' yesterday') : 'Not yet logged for yesterday' };
+  return { label: 'Appetite', icon: 'notes', description: 'Review appetite history logged from Home.', meta: yEntry ? ((APPETITE_LABELS[yEntry.value] || yEntry.value) + ' today') : 'Not yet logged for today' };
 }
 
 function renderReportsMenu(now) {
@@ -4320,7 +4360,36 @@ function exportFilename(kind, ext) {
 }
 
 // Plain browser download. No native bridge here -- WEB-MAIN is a web app, so this is the whole path.
+// Returns { method: 'share'|'download', cancelled: boolean }.
+// The caller MUST use this. Announcing "saved" after a cancelled share is the same lie this
+// function existed to tell for six releases.
 async function deliverFile(blob, filename) {
+  // THE iOS PWA PROBLEM, confirmed live on 2026-08-21: in an installed PWA (standalone display
+  // mode) `<a download>` does not save anything. Safari ignores it or opens the blob in a viewer
+  // with no route to Files. Every export produced a success toast and no file. The Web Share API
+  // (Level 2, iOS Safari 15+) is the only reliable route -- the share sheet has "Save to Files".
+  try {
+    if (typeof File === 'function' && navigator.canShare) {
+      const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          return { method: 'share', cancelled: false };
+        } catch (err) {
+          // AbortError means she tapped Cancel. That is not a failure and must not be retried as
+          // a download -- a file appearing after she cancelled is its own kind of wrong.
+          if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+            return { method: 'share', cancelled: true };
+          }
+          // Anything else: fall through and try the download route rather than losing the export.
+          console.warn('[export] share failed, falling back to download:', err);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[export] share unavailable, using download:', err);
+  }
+
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement('a');
@@ -4331,6 +4400,15 @@ async function deliverFile(blob, filename) {
     // is revoked in the same tick as the click.
     setTimeout(() => { try { URL.revokeObjectURL(url); } catch (err) {} }, 4000);
   }
+  return { method: 'download', cancelled: false };
+}
+
+// One place that turns a deliverFile() result into words. "Saved to your downloads" is wrong for a
+// share sheet (she chose where it went) and a lie if she cancelled.
+function deliveredWord(res, what) {
+  if (res && res.cancelled) return null;
+  if (res && res.method === 'share') return what + ' — choose "Save to Files" to keep it.';
+  return what + ' saved to your downloads.';
 }
 
 // The busy state is set, then a frame is yielded, THEN the work runs. Without the yield the whole
@@ -4367,8 +4445,9 @@ async function downloadEntriesCSV() {
     }
     const csv = [EXPORT_COLUMNS].concat(rows).map(r => r.map(csvField).join(',')).join('\r\n');
     // UTF-8 BOM so Excel opens °F, é and em-dashes correctly instead of as mojibake.
-    await deliverFile(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), exportFilename('records', 'csv'));
-    setToast(nLogged + ' entr' + (nLogged === 1 ? 'y' : 'ies') + ' saved to your downloads.');
+    const csvRes = await deliverFile(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), exportFilename('records', 'csv'));
+    const csvWord = deliveredWord(csvRes, nLogged + ' entr' + (nLogged === 1 ? 'y' : 'ies'));
+    if (csvWord) setToast(csvWord);
   } catch (err) {
     // err.message here is a raw browser string -- "The operation is insecure.",
     // "QuotaExceededError". None of it is actionable, and all of it reads like the app broke in a
