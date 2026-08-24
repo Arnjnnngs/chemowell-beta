@@ -49,8 +49,18 @@ env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy \
 ```
 Parity stops being a project and becomes a step.
 
-**Current:** `beta-v49`, derived from care-tracker v49 (`61eca1e`).
-`index.html` md5 `b71c56f38c5b28f790474b35a9af4a03` · `sw.js` CACHE `chemowell-beta-v49`
+**Current:** `beta-v59`, derived from care-tracker v59 (`4d6df42`), re-staged 2026-08-24.
+`index.html` md5 `a42c2f53998615069a1acd30f13a3546` · `sw.js` CACHE `chemowell-beta-v59`
+
+> **This line was stale and is worth noting rather than quietly correcting.** It read `beta-v49`
+> while the repo was actually on `beta-v52` — v51 and v52 were pushed without updating it. The
+> re-staging recipe below is one command, but it only stays true if the record of what it last
+> produced is kept honest. A stale "Current" line is how seven releases of drift go unnoticed.
+
+> **`sw.js` is part of parity too, and the recipe below does not say so.** This repo carried the
+> pre-v53 cache-first service worker until 2026-08-24 — the one that lets a phone keep serving the
+> previous build. In staging that is worse than in production: a tester passes or fails a build
+> that is not the one under test. Copy production's `sw.js` and change only `CACHE`.
 
 ---
 

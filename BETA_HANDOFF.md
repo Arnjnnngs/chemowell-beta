@@ -2,8 +2,15 @@
 
 > **THIS IS THE STAGING VARIANT.** `TEST_MODE = true` in `index.html` — writes to
 > `caretracker_test_entries` (never `caretracker_entries`), push/local notifications fully disabled,
-> orange "🧪 Testing app" banner in the header. sw.js cache is `caretracker-testing-vN`. Features
-> under test here that are NOT (yet) in production: chemo cycle system, missed-dose alerts,
+> orange **BETA — TEST DATA ONLY** banner at the top of Home. sw.js cache is `chemowell-beta-vN`.
+>
+> **⚠️ THE FEATURE LIST BELOW IS OBSOLETE AND IS KEPT ONLY AS A RECORD.** It describes a time when
+> this repo *led* production and carried features production lacked. Since the 2026-08-19 re-staging
+> that is no longer true in either direction: this build is **derived from** production by
+> `harness/betaify-patch.py`, so its feature set is production's exactly, plus test isolation, and
+> nothing here is "under test" ahead of production any more. Do not use this list to decide what to
+> promote — there is nothing to promote. Read `BETA_STATUS.md` for what this build actually is.
+> The historical list, as written: chemo cycle system, missed-dose alerts,
 > menstrual cycle tracking, In-Patient day tracking, Morphine pain-level scale + rolling 4h/15mg
 > dosing ceiling (v56), Zofran as-needed, Bowel Movement/Symptoms tracking (Diarrhea/Constipation
 > removed from the dropdown as of v57, replaced with a required-note "Other"), persistent
@@ -17,9 +24,13 @@
 > **Purpose:** Complete context for any AI assistant to understand, maintain, and extend this repo
 > without prior knowledge. See `BETA_CLAUDE.md` first for the non-negotiable rules.
 >
-> **Last updated:** July 23, 2026
-> **Current version:** v71 (ChemoWell Beta rebrand — branding only, no functional changes) (testing) (see BETA_README.md's versioning convention — this repo's version is always
-> "current live prod version + 1" while testing is ahead)
+> **Last updated:** August 24, 2026
+> **Current version:** `beta-v59`, derived from care-tracker **v59** (`4d6df42`) by
+> `harness/betaify-patch.py`. **The "prod version + 1" convention below no longer applies** and is
+> left in place only because BETA_README.md still describes it: since the 2026-08-19 re-staging this
+> repo is no longer numbered ahead of production, it is numbered *as* the production release it was
+> derived from, prefixed `beta-`. Ahead-of-prod numbering made sense when the beta led production;
+> it leads nothing now, and cannot — it is production plus test isolation, by construction.
 >
 > **Zofran chemo-block is a 3-day block — chemo day plus the 2 days after** (e.g. chemo Thursday ->
 > blocked Thu/Fri/Sat, opens Sunday 8 AM), confirmed directly by Aaron as the original, correct spec.
@@ -606,6 +617,34 @@ were corrupted and a cache reset understandably did nothing).
 See BETA_README.md's **Testing Version History** table for the authoritative, dated list (this repo uses
 `vN` numbers matching production's scheme, offset one ahead while testing leads — not an independent
 counter). **v38–v49 have not yet been individually documented there — see Known Issues #2.**
+
+### beta-v59 — August 24, 2026
+
+**Re-staged from production after seven releases of drift.** The beta sat at `beta-v52` from Aug 21
+while production shipped v53 through v59, so it was missing the paracentesis dialog fix, build
+freshness delivery, the declined-medication list on restore, password-protected backups, the in-app
+error/idea log, the Settings screen and the "liters" normalisation. A staging app that stale cannot
+stage anything: a change passes or fails there for reasons unrelated to the change.
+
+Re-derived with `harness/betaify-patch.py` against care-tracker v59 (`4d6df42`). All nine isolation
+edits matched clean and every safety post-condition passed — no live collection reference survives
+unguarded, `TEST_MODE` is set exactly once, push registration and local reminders are both disabled,
+the composed 1s tick guard is intact, and the output parses. Parity is true by construction.
+
+**`sw.js` was brought to parity too, which the documented one-command recipe does not cover.** This
+repo still carried the pre-v53 cache-first service worker — the one that lets an installed PWA keep
+serving the previous build. In staging that is worse than in production: a tester reports a pass or a
+fail against a build that is not the one under test. It is now production's network-first shell
+worker, with `CACHE` changed to `chemowell-beta-v59` and nothing else altered.
+
+**Both harness suites hardcoded a playwright path from the retired sandbox** and could not start at
+all in a cloud session. A gate that cannot start is indistinguishable from a gate that passes. They
+now resolve playwright from a candidate list.
+
+`APP_VERSION` → `beta-v59` · `index.html` md5 `a42c2f53998615069a1acd30f13a3546` · `sw.js` CACHE
+`chemowell-beta-v59`.
+
+QA: `harness/beta-isolation-test.mjs` **9/9**, `harness/eod-test.mjs` **11/11**.
 
 ### v58 — July 20, 2026
 
