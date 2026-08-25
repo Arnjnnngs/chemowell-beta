@@ -31,6 +31,13 @@ to being exactly one ahead.
 Always check the **actual pushed** `care-tracker` repo (not a local/unpushed copy) for its real
 current version before assigning the next testing version number.
 
+> **⚠️ THE "PRODUCTION + 1" RULE ABOVE IS RETIRED — corrected 2026-08-24.** It belonged to the era
+> when this repo LED production and carried features production lacked. Since the 2026-08-19
+> re-staging this build is *derived from* production by `harness/betaify-patch.py`, so it leads
+> nothing and cannot. A build derived from production `v59` is **`beta-v59`**, not `v60`, with
+> `sw.js` CACHE `chemowell-beta-v59`. The paragraphs above are kept as the record of the old scheme,
+> which still explains every entry up to `v71` in the table below.
+
 ## Testing Version History (this repo)
 
 | Version | Date | Based on / ahead of prod | Changes under test | Status |

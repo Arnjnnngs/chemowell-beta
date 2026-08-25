@@ -27,7 +27,8 @@
 > **Last updated:** August 24, 2026
 > **Current version:** `beta-v59`, derived from care-tracker **v59** (`4d6df42`) by
 > `harness/betaify-patch.py`. **The "prod version + 1" convention below no longer applies** and is
-> left in place only because BETA_README.md still describes it: since the 2026-08-19 re-staging this
+> left in place only because BETA_README.md and this file's own "Bump the version" recipe still
+> referenced it (both corrected 2026-08-24): since the 2026-08-19 re-staging this
 > repo is no longer numbered ahead of production, it is numbered *as* the production release it was
 > derived from, prefixed `beta-`. Ahead-of-prod numbering made sense when the beta led production;
 > it leads nothing now, and cannot — it is production plus test isolation, by construction.
@@ -614,9 +615,11 @@ were corrupted and a cache reset understandably did nothing).
 
 ## 10. Version History
 
-See BETA_README.md's **Testing Version History** table for the authoritative, dated list (this repo uses
-`vN` numbers matching production's scheme, offset one ahead while testing leads — not an independent
-counter). **v38–v49 have not yet been individually documented there — see Known Issues #2.**
+See BETA_README.md's **Testing Version History** table for the authoritative, dated list. **Numbering
+changed at the 2026-08-19 re-staging:** entries up to `v71` use the old "production + 1" scheme from
+when this repo led production; entries from `beta-v49` onward are named for the production release
+they were derived from, prefixed `beta-`. The offset-ahead scheme is retired — see "Bump the version"
+below. **v38–v49 have not yet been individually documented there — see Known Issues #2.**
 
 ### beta-v59 — August 24, 2026
 
@@ -914,16 +917,27 @@ A dormant `seedDemo()` function fired whenever the app's first Firestore snapsho
    safety rules in `index.html`, then complete the full mocked-Firestore regression pass.
 
 ### Bump the version
-1. Check the **actual pushed** `care-tracker` (prod) repo for its current live version.
-2. This repo's new version = that number + 1 (or +1 again if testing is already ahead and adding
-   more changes before prod catches up).
-3. Update `sw.js`'s `CACHE` constant and both `BETA_README.md`/`BETA_HANDOFF.md`.
+**This recipe was wrong until 2026-08-24 and would have produced `v60` for a build derived from
+production v59.** The "prod + 1" convention belonged to the era when this repo LED production. Since
+the 2026-08-19 re-staging it leads nothing — it is production plus test isolation, by construction —
+so it is numbered *as* the release it was derived from, prefixed `beta-`.
+1. Check the **actual pushed** `care-tracker` (prod) repo for the version you derived from.
+2. This repo's new version = `beta-<that version>`. Deriving from prod `v59` gives `beta-v59`.
+3. Set `sw.js`'s `CACHE` to `chemowell-beta-<that version>` (e.g. `chemowell-beta-v59`) and update
+   both `BETA_README.md` and `BETA_HANDOFF.md`.
 
 ### Debug the live testing app
 1. Open the testing URL in Chrome, DevTools → Console for errors.
-2. DevTools → Application → Service Workers to check SW status (`caretracker-testing-vN`).
-3. Confirm the orange "🧪 Testing app" banner is visible — if it's missing, `TEST_MODE` may have been
-   accidentally flipped, which is a serious bug (would point this app at prod's collection).
+2. DevTools → Application → Service Workers to check SW status (`chemowell-beta-vN` — the old
+   `caretracker-testing-vN` name has not been used since the v71 rebrand).
+3. Confirm the orange **"BETA — TEST DATA ONLY"** banner is visible at the top of Home — if it's
+   missing, `TEST_MODE` may have been accidentally flipped, which is a serious bug (would point this
+   app at the patient's real collection).
+   **This step named the wrong banner until 2026-08-24.** It said to look for "🧪 Testing app", which
+   this build has not shown since the rebrand — so anyone following this checklist would have found
+   no such banner and concluded the beta was writing to Brandi's live records. A false alarm inside a
+   safety procedure is its own defect; the banner text is asserted by `ISO-5` in
+   `harness/beta-isolation-test.mjs`, so trust that gate over any wording written down here.
 4. Look for the "Live sync" indicator in the header for Firestore connectivity.
 5. **If the page looks entirely blank or shows literally nothing/"undefined"** even after a cache
    reset: don't assume it's a client-side caching problem — fetch the live file directly
