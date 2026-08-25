@@ -20,7 +20,7 @@ override is active) respects the simulated date. This control only exists and on
 
 ---
 
-## Versioning (matches production, offset ahead)
+## Versioning — RETIRED SCHEME BELOW, see the notice further down
 
 This repo's version number is **`(current live production version) + 1`** while testing carries
 features prod doesn't have yet — not an independent "t1, t2..." counter. Example: production is
