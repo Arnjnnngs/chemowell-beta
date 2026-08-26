@@ -49,8 +49,13 @@ env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy \
 ```
 Parity stops being a project and becomes a step.
 
-**Current:** `beta-v59`, derived from care-tracker v59 (`4d6df42`), re-staged 2026-08-24.
-`index.html` md5 `a42c2f53998615069a1acd30f13a3546` · `sw.js` CACHE `chemowell-beta-v59`
+**Current:** `beta-v60`, derived from care-tracker v60, re-staged 2026-08-26.
+`index.html` md5 `4fe5a3d2665a5d3441d953eb76727f86` · `sw.js` CACHE `chemowell-beta-v60`
+
+> Carries care-tracker v60's in-patient and treatment-day rebuild: per-window suppression
+> instead of whole-day, medications loggable throughout a stay, treatment offsets measured
+> from the NEAREST date, and medication-flag backfill. Three new suites came with it and are
+> in `harness/`.
 
 > **This line was stale and is worth noting rather than quietly correcting.** It read `beta-v49`
 > while the repo was actually on `beta-v52` — v51 and v52 were pushed without updating it. The
