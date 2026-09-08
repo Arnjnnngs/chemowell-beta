@@ -96,6 +96,7 @@ const MED_PURPOSE = {
   'acetaminophen': 'Eases pain.',
   'paracetamol': 'Eases pain.',
   'tylenol': 'Eases pain.',
+  'tylenol liquid': 'Eases pain. This is Tylenol in liquid form.',
   'ibuprofen': 'Eases pain and swelling.',
   'advil': 'Eases pain and swelling.',
   'morphine': 'A strong pain reliever for moderate to severe pain.',
