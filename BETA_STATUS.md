@@ -49,8 +49,12 @@ env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy \
 ```
 Parity stops being a project and becomes a step.
 
-**Current:** `beta-v60`, derived from care-tracker v60, re-staged 2026-08-26.
-`index.html` md5 `4fe5a3d2665a5d3441d953eb76727f86` · `sw.js` CACHE `chemowell-beta-v60`
+**Current:** `beta-v61`, derived from care-tracker v74 / ChemoWell app-v72, 2026-09-08.
+`index.html` md5 `367726ee489c834f448a178aa951841c` · `sw.js` CACHE `chemowell-beta-v61`
+
+> Carries the medication-purpose line: every medication says what it is generally for, in a
+> short original sentence written here rather than copied from anywhere. Built from
+> `harness-med-purpose-patch.py`; the gate is `harness/med-purpose-test.mjs` (33/33).
 
 > Carries care-tracker v60's in-patient and treatment-day rebuild: per-window suppression
 > instead of whole-day, medications loggable throughout a stay, treatment offsets measured
