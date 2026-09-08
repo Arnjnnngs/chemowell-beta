@@ -104,7 +104,7 @@ const MED_PURPOSE = {
   'hydrocodone': 'A strong pain reliever for moderate to severe pain.',
   'tramadol': 'A pain reliever for moderate pain.',
   'gabapentin': 'Eases nerve pain, and is also used for some seizures.',
-  'lidocaine': 'A numbing cream for soreness in one spot on the skin.',
+  'lidocaine': 'Numbs the area where it is used.',
   'pantoprazole': 'Lowers stomach acid, which protects the stomach and eases reflux.',
   'protonix': 'Lowers stomach acid, which protects the stomach and eases reflux.',
   'omeprazole': 'Lowers stomach acid, which protects the stomach and eases reflux.',
@@ -185,7 +185,7 @@ rep("""      h('label', null, fieldLabel('Generic name'), formInput({ value: for
 # the extracted script against the unpatched baseline, which parses clean.
 rep("""          h('div', { style: { fontSize: '12px', color: '#6E5261', fontWeight: '600', marginTop: '1px' } }, med.sub || 'No generic name')""",
     """          h('div', { style: { fontSize: '12px', color: '#6E5261', fontWeight: '600', marginTop: '1px' } }, med.sub || 'No generic name'),
-          purposeOf(med) ? h('div', { 'data-med-purpose': med.id, style: { fontSize: '12.5px', color: '#5F4A56', fontWeight: '500', marginTop: '4px', lineHeight: '1.35' } }, purposeOf(med)) : null""")
+          purposeOf(med) ? h('div', { 'data-med-purpose': med.id, style: { fontSize: '12.5px', color: '#5F4A56', fontWeight: '500', marginTop: '4px', lineHeight: '1.35', overflowWrap: 'anywhere' } }, purposeOf(med)) : null""")
 rep("""    h('div', { 'data-tour-meds': 'true', style: { display: 'flex', flexDirection: 'column', gap: '9px' } }, ...cards)""",
     """    h('div', { 'data-med-disclaimer': 'true', style: { fontSize: '11.5px', color: '#7D6974', lineHeight: '1.4', margin: '2px 0 10px' } },
       'The line under each medication is general information, not medical advice. Your care team is the answer for anything specific.'),
