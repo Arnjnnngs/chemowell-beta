@@ -179,21 +179,21 @@ rep("""      h('label', null, fieldLabel('Generic name'), formInput({ value: for
     """      h('label', { style: { gridColumn: '1 / -1' } }, fieldLabel('What it\u2019s for'), formInput({ value: form.purpose, placeholder: (purposeOf({ name: (state.medEditor && state.medEditor.form && state.medEditor.form.name) || '', sub: (state.medEditor && state.medEditor.form && state.medEditor.form.sub) || '' }) || 'For example: settles nausea'), onInput: event => updateMedicationForm('purpose', event.target.value) })),
       h('label', null, fieldLabel('Generic name'), formInput({ value: form.sub, place""")
 
-rep("""        h('div', { style: { minWidth: '0', flex: '1' } },
-          h('div', { style: { fontSize: '16px', fontWeight: '800', color: '#342530', letterSpacing: '-0.015em' } }, med.name),""",
-    """        // overflowWrap belongs on the CARD's whole text column, not on the purpose line alone.
-        // The name, the generic name and the note are free text too, and pass 4 measured a
-        // 300-character name at 3267px on a 320px viewport while the purpose line beside it
-        // wrapped correctly -- the fix had been put on the one string this release added.
-        h('div', { style: { minWidth: '0', flex: '1', overflowWrap: 'anywhere' } },
-          h('div', { style: { fontSize: '16px', fontWeight: '800', color: '#342530', letterSpacing: '-0.015em' } }, med.name),""")
+# ---- the wrapping rule, on the WHOLE medication card -------------------------------------------
+# Pass 4 put it on the purpose line; pass 5 found the note and the dose summary render in a
+# different container, so a pasted pharmacy name in the note measured 668px at a 320px viewport
+# while the new checks stayed green. One property on the article covers every string the card
+# renders. The two narrower copies are gone: overflow-wrap is inherited, so they did nothing,
+# and keeping them let a comment claim a non-redundancy the audit disproved in one run.
+rep("""    return h('article', { style: { background: 'rgba(255,255,255,0.60)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(212,104,138,0.16)', borderRadius: '17px', padding: '13px', boxShadow: '0 3px 16px rgba(180,130,150,0.09), inset 0 1px 0 rgba(255,255,255,0.75)' } },""",
+    """    return h('article', { style: { background: 'rgba(255,255,255,0.60)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(212,104,138,0.16)', borderRadius: '17px', padding: '13px', overflowWrap: 'anywhere', boxShadow: '0 3px 16px rgba(180,130,150,0.09), inset 0 1px 0 rgba(255,255,255,0.75)' } },""")
 # ---- 4. the Meds screen shows it, with one disclaimer above the list -----------------------------
 # The anchor MUST carry its own closing paren. Without it the replacement left `: null)` followed by
 # the source's own `)`, an unbalanced paren that broke the whole module -- caught by parse-checking
 # the extracted script against the unpatched baseline, which parses clean.
 rep("""          h('div', { style: { fontSize: '12px', color: '#6E5261', fontWeight: '600', marginTop: '1px' } }, med.sub || 'No generic name')""",
     """          h('div', { style: { fontSize: '12px', color: '#6E5261', fontWeight: '600', marginTop: '1px' } }, med.sub || 'No generic name'),
-          purposeOf(med) ? h('div', { 'data-med-purpose': med.id, style: { fontSize: '12.5px', color: '#5F4A56', fontWeight: '500', marginTop: '4px', lineHeight: '1.35', overflowWrap: 'anywhere' } }, purposeOf(med)) : null""")
+          purposeOf(med) ? h('div', { 'data-med-purpose': med.id, style: { fontSize: '12.5px', color: '#5F4A56', fontWeight: '500', marginTop: '4px', lineHeight: '1.35' } }, purposeOf(med)) : null""")
 rep("""    h('div', { 'data-tour-meds': 'true', style: { display: 'flex', flexDirection: 'column', gap: '9px' } }, ...cards)""",
     """    h('div', { 'data-med-disclaimer': 'true', style: { fontSize: '11.5px', color: '#7D6974', lineHeight: '1.4', margin: '2px 0 10px' } },
       'Where a medication has a line under it, that is general information, not medical advice. Your care team is the answer for anything specific.'),
