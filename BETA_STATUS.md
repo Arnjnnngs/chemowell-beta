@@ -54,12 +54,14 @@ Parity stops being a project and becomes a step.
 
 > Carries the medication-purpose line: every medication says what it is generally for, in a
 > short original sentence written here rather than copied from anywhere. Built from
-> `harness-med-purpose-patch.py`; the gate is `harness/med-purpose-test.mjs` (40/40).
+> `harness-med-purpose-patch.py`; the gate is `harness/med-purpose-test.mjs` (42/42).
 >
 > **Worth reading before trusting any check in this repo.** The port's dosage-form guard was
 > written with a doubled backslash and could never match anything. It sat green for weeks over the
 > exact sentence the sibling app's audit had blocked, which was still shipping here. Four liveness
-> checks now prove each guard can fire. A green check nobody has proved can go red is not evidence.
+> checks now prove each guard can fire — and the pass after that found two of those four re-typing
+> their pattern instead of naming it, which proves nothing about the original. A green check nobody
+> has proved can go red is not evidence, and neither is a check that vouches for a copy.
 
 > Carries care-tracker v60's in-patient and treatment-day rebuild: per-window suppression
 > instead of whole-day, medications loggable throughout a stay, treatment offsets measured
