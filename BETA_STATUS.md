@@ -50,7 +50,7 @@ env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy \
 Parity stops being a project and becomes a step.
 
 **Current:** `beta-v61`, derived from care-tracker v74 / ChemoWell app-v72, 2026-09-08.
-`index.html` md5 `367726ee489c834f448a178aa951841c` · `sw.js` CACHE `chemowell-beta-v61`
+`index.html` md5 `c9adb98c8f92992d950f0c001e5ad7eb` · `sw.js` CACHE `chemowell-beta-v61`
 
 > Carries the medication-purpose line: every medication says what it is generally for, in a
 > short original sentence written here rather than copied from anywhere. Built from
