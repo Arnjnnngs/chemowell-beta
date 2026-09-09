@@ -54,7 +54,7 @@ Parity stops being a project and becomes a step.
 
 > Carries the medication-purpose line: every medication says what it is generally for, in a
 > short original sentence written here rather than copied from anywhere. Built from
-> `harness-med-purpose-patch.py`; the gate is `harness/med-purpose-test.mjs` (46/46).
+> `harness-med-purpose-patch.py`; the gate is `harness/med-purpose-test.mjs` (49/49).
 >
 > **Worth reading before trusting any check in this repo.** The port's dosage-form guard was
 > written with a doubled backslash and could never match anything. It sat green for weeks over the
