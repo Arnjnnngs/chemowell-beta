@@ -60,7 +60,7 @@ merges the moment he says the word — nothing about it is half-finished.
 > beta-v62 carries A, B and C: removed medications can be brought back under their original id;
 > the purpose table gains Neulasta, Reglan, Phenergan and a dozen brand halves; and combination
 > products answer for themselves instead of borrowing their main ingredient's line. Built from
-> `harness-archived-meds-patch.py`; the gate is `harness/archived-meds-test.mjs` (40/40), with
+> `harness-archived-meds-patch.py`; the gate is `harness/archived-meds-test.mjs` (42/42), with
 > four EXEMPT lines written out because this repo's older banner carries no missed-dose count.
 
 > Carries the medication-purpose line: every medication says what it is generally for, in a
