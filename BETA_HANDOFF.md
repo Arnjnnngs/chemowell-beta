@@ -24,8 +24,8 @@
 > **Purpose:** Complete context for any AI assistant to understand, maintain, and extend this repo
 > without prior knowledge. See `BETA_CLAUDE.md` first for the non-negotiable rules.
 >
-> **Last updated:** September 8, 2026
-> **Current version:** `beta-v61`, derived from care-tracker **v74** by
+> **Last updated:** September 11, 2026
+> **Current version:** `beta-v62`, derived from care-tracker **v75** by
 > `harness/betaify-patch.py`. **The "prod version + 1" convention below no longer applies** and is
 > left in place only because BETA_README.md and this file's own "Bump the version" recipe still
 > referenced it (both corrected 2026-08-24): since the 2026-08-19 re-staging this
