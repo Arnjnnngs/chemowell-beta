@@ -97,8 +97,8 @@ rep("""  'benadryl': 'An antihistamine, used for allergic reactions and to help 
   'neulasta': 'Helps the body make white blood cells.',
   'metoclopramide': 'Settles nausea and helps the stomach empty.',
   'reglan': 'Settles nausea and helps the stomach empty.',
-  'promethazine': 'Settles nausea and vomiting, and is also used for allergies.',
-  'phenergan': 'Settles nausea and vomiting, and is also used for allergies.',
+  'promethazine': 'Settles nausea and vomiting, and is also used for allergies. It causes drowsiness.',
+  'phenergan': 'Settles nausea and vomiting, and is also used for allergies. It causes drowsiness.',
   // app-v73 (B): brand halves of drugs the table already covered by generic name. Typing the brand
   // used to show no line at all, which reads as "the app does not know this one".
   'motrin': 'Eases pain and swelling.',
@@ -121,8 +121,12 @@ rep("""  'benadryl': 'An antihistamine, used for allergic reactions and to help 
   'tylenol pm': 'Eases pain, and also contains an antihistamine that helps with sleep.',
   'percocet': 'A strong pain reliever that also contains acetaminophen.',
   'norco': 'A strong pain reliever that also contains acetaminophen.',
-  'vicodin': 'A strong pain reliever that also contains acetaminophen.',
-  'excedrin': 'Eases pain. It also contains aspirin and caffeine.'
+  // EXCEDRIN IS DELIBERATELY NOT HERE, and that is the C principle applied honestly rather than
+  // mechanically. The bare name covers products with DIFFERENT ingredients -- Tension Headache
+  // has no aspirin, PM swaps the caffeine for a sedating antihistamine -- so no single line is
+  // true of all of them. A name that cannot carry one true sentence gets no sentence: the app
+  // shows nothing, which is what it already does for every name it does not recognise.
+  'vicodin': 'A strong pain reliever that also contains acetaminophen.'
 };""")
 
 
