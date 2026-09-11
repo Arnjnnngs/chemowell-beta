@@ -50,7 +50,7 @@ env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy \
 Parity stops being a project and becomes a step.
 
 **Current:** `beta-v62`, derived from care-tracker v75 / ChemoWell app-v73, 2026-09-11.
-`index.html` md5 `3812d1ad2102e6a52df5847fb9d28364` · `sw.js` CACHE `chemowell-beta-v62`
+`index.html` md5 `2ed1d5869bd5f882d2cd6544af8274f6` · `sw.js` CACHE `chemowell-beta-v62`
 
 **BUILT AND PUSHED TO THE BRANCH, NOT MERGED.** Aaron, 2026-09-11: *"Not sure chemowell beta is
 being used and has been updated in a while."* He approved merging care-tracker and
@@ -60,7 +60,7 @@ merges the moment he says the word — nothing about it is half-finished.
 > beta-v62 carries A, B and C: removed medications can be brought back under their original id;
 > the purpose table gains Neulasta, Reglan, Phenergan and a dozen brand halves; and combination
 > products answer for themselves instead of borrowing their main ingredient's line. Built from
-> `harness-archived-meds-patch.py`; the gate is `harness/archived-meds-test.mjs` (33/33), with
+> `harness-archived-meds-patch.py`; the gate is `harness/archived-meds-test.mjs` (40/40), with
 > four EXEMPT lines written out because this repo's older banner carries no missed-dose count.
 
 > Carries the medication-purpose line: every medication says what it is generally for, in a
