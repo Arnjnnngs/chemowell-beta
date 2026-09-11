@@ -278,7 +278,7 @@ console.log('\n3. THE SAFETY CHECK: it comes back with reminders OFF');
   // medication takes its misses off the banner; bringing it back must NOT put them all back on.
   // Delete the alertsFrom guard from the missed-dose walk and this jumps straight back to the
   // before-number, which is the wall of red the release exists to prevent.
-  if (missedAfter === null || missedRemoved === null) exempt('THE SAFETY CHECK on the banner', 'banner not readable in this build; alerts and alertsFrom are asserted from the saved record above');
+  if (missedAfter === null || missedRemoved === null) exempt('THE SAFETY CHECK on the banner', 'banner not readable in this build; the reminders flag and the recorded span are asserted from the saved record above');
   // BOTH ENDS. This medication was off the list for about two seconds, so the span it was away
   // holds no missed doses -- the total must come back to EXACTLY where it started. Asserting it
   // equalled the REMOVED number was green on a build that erased the medication's whole
@@ -308,6 +308,107 @@ console.log('\n4. It survives a reload, and restoring again is a no-op');
   await goMeds();
   const gone = await clickLabel('Bring back ' + TRACKED.name);
   t('there is no "Bring back" control for it any more', !gone, '');
+}
+
+console.log('\n4B. THE OTHER HALF OF THE SAFETY CHECK: a span it really was away');
+{
+  // Section 3 proves the suppression is not too WIDE: the medication is off the list for about two
+  // seconds, so the total has to return to exactly where it started. It proves nothing about whether
+  // the suppression happens AT ALL -- in the sibling apps, deleting the guard from the missed-dose
+  // walk outright left every check green. Here the archive is made to read as removed a fortnight
+  // ago, the way a real phone's would.
+  await goMeds();
+  await clickLabel('Remove ' + TRACKED.name);
+  await page.waitForTimeout(400);
+  await clickLabel('Confirm removal of ' + TRACKED.name);
+  await page.waitForTimeout(800);
+  const AWAY_DAYS = 14;
+  const backdated = await page.evaluate(([k, id, days]) => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem(k) || '{}');
+      const arc = cfg.archivedMeds || {};
+      if (!Object.prototype.hasOwnProperty.call(arc, id)) return false;
+      const d = new Date(); d.setHours(0, 0, 0, 0);
+      arc[id].removedAt = d.getTime() - days * 86400000;
+      localStorage.setItem(k, JSON.stringify(cfg));
+      return true;
+    } catch (e) { return false; }
+  }, [MED_KEY, TRACKED.id, AWAY_DAYS]);
+  t('the archive can be made to read as removed ' + AWAY_DAYS + ' days ago, the way a real phone would',
+    backdated, '');
+  await load();
+  const missedAway = await missedTotal();
+  await goMeds();
+  await clickLabel('Bring back ' + TRACKED.name);
+  await page.waitForTimeout(400);
+  await clickLabel('Confirm bringing back ' + TRACKED.name);
+  await page.waitForTimeout(1000);
+  const wide = ((await saved()).meds || []).find(m => m.id === TRACKED.id);
+  const spans = (wide && Array.isArray(wide.awayPeriods)) ? wide.awayPeriods : [];
+  const span = spans.length ? spans[spans.length - 1] : null;
+  const spanDays = span ? Math.round((Number(span.end) - Number(span.start)) / 86400000) : -1;
+  t('the span starts on the day it actually left, not on the day it came back',
+    spanDays === AWAY_DAYS, spanDays + ' days recorded');
+  const missedWide = await missedTotal();
+  // THE BEHAVIOURAL HALVES ARE EXEMPT HERE AND THE REASON IS WRITTEN DOWN: this repo's banner
+  // carries no missed-dose count, so there is no number to compare. The recorded span above is read
+  // from the saved medication, which works identically in all three apps.
+  if (missedWide === null || missedAway === null || missedBefore === null)
+    exempt('the suppression is bounded at both ends', 'this build\'s banner carries no missed-dose count; the recorded span is asserted above');
+  else {
+    t('SUPPRESSION HAPPENS: the days it was off the list are not counted as missed',
+      missedWide < missedBefore, missedBefore + ' if nothing were suppressed -> ' + missedWide + ' now');
+    t('SUPPRESSION IS BOUNDED: every day outside that span is still counted',
+      missedWide > missedAway, missedAway + ' with it removed -> ' + missedWide + ' after bringing it back');
+  }
+  await load();
+  const afterReload = await missedTotal();
+  if (afterReload === null || missedWide === null)
+    exempt('the span survives closing and reopening the app', 'this build\'s banner carries no missed-dose count');
+  else t('and the span survives closing and reopening the app, which storage cannot prove',
+    afterReload === missedWide, missedWide + ' before the reload -> ' + afterReload + ' after');
+  await goMeds();
+}
+
+console.log('\n4C. A SPAN FROM ANOTHER DEVICE CANNOT SWALLOW THE RECORD');
+{
+  // medsync accepts a medication config published by another phone and the missed-dose walk reads
+  // whatever `awayPeriods` holds. A malformed span fails safe on its own; a WIDE one does not, and
+  // the first version of the validator in the sibling apps passed exactly this shape.
+  const planted = await page.evaluate(([k, id]) => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem(k) || '{}');
+      const med = (cfg.meds || []).find(m => m.id === id);
+      if (!med) return false;
+      med.awayPeriods = [{ start: 1, end: 8640000000000 }];
+      localStorage.setItem(k, JSON.stringify(cfg));
+      return true;
+    } catch (e) { return false; }
+  }, [MED_KEY, TRACKED.id]);
+  t('a span covering all of recorded time can be planted, the way another device could publish one',
+    planted, '');
+  await load();
+  // THE RECORD, NOT THE BANNER -- and NOT STORAGE EITHER, until the app has written to it. The first
+  // version of this check read localStorage straight after the reload and FAILED on a correct build,
+  // because the validator drops the span IN MEMORY and only writes it back on the next save: the file
+  // still held what the app had already discarded. That is the identical trap this suite documents
+  // catching once before, for `config`, and it caught this check out too.
+  // So the app is made to save: one edit through the editor, and what it writes is what it believes.
+  await goMeds();
+  await clickLabel('Edit ' + TRACKED.name);
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const lab = [...document.querySelectorAll('label')].find(l => /what it/i.test(l.innerText || ''));
+    const inp = lab && lab.querySelector('input, textarea');
+    if (inp) { inp.value = 'saved after the wide span was planted'; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+  await clickText(/^Save changes$/);
+  await page.waitForTimeout(800);
+  const after = ((await saved()).meds || []).find(m => m.id === TRACKED.id);
+  const kept = (after && Array.isArray(after.awayPeriods)) ? after.awayPeriods : [];
+  t('THE RECORD SURVIVES IT: the wide span is dropped rather than trusted, and never written back',
+    !!after && !kept.some(sp => Number(sp.end) > Date.now()), JSON.stringify(kept));
+  await goMeds();
 }
 
 console.log('\n5. Restore is REFUSED when an active medication already holds that id');
