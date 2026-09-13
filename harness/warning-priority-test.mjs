@@ -74,15 +74,19 @@ const d0 = new Date(); d0.setHours(12, 0, 0, 0);
 const noon = d0.getTime();
 // Over the acetaminophen ceiling for the day, and a Protonix dose 30 minutes ago so an Iron dose
 // logged now falls inside the two-hour interaction window.
-// THREE REAL DOSES, NOT ONE ENTRY WITH A BIG NUMBER IN IT. The first fixture wrote
-// `dose: '1000 mg', mg: 4000` and the suite reported "no red warning" -- because the app derives the
-// milligrams from the DOSE LABEL, not from the mg field, so the day totalled 1,000 mg and was never
-// near the ceiling. The suite was right that no warning appeared and wrong about why, which is the
-// most expensive kind of failing test: it accuses the code of the bug the fixture has.
+// THE FIXTURE HAS TO CLEAR TWO LOCKS BEFORE IT CAN REACH THE BUG, and getting that wrong made the
+// suite accuse the app of a defect the fixture had. Both locks are correct behaviour:
+//   * the CEILING lock (`used >= max`) -- seed the day to 3,000 mg and the card is already locked,
+//     so tapping it opens the override flow, not the dose modal;
+//   * the GAP lock -- Tylenol waits four hours between doses, so a dose seeded two hours ago locks
+//     the card just as firmly.
+// So: 2,500 mg seeded, all of it at least eight hours ago. The card is live, and one 1,000 mg dose
+// takes the day to 3,500 and past the limit. Timestamps are relative to `now`, not to a fixed noon,
+// so the suite does not quietly stop working when it is run in the morning.
 const SEED = [
-  { id: 's1', medId: 'tylenol', kind: 'med', ts: noon - 6 * 3600000, dose: '1000 mg', mg: 1000 },
-  { id: 's2', medId: 'tylenol', kind: 'med', ts: noon - 4 * 3600000, dose: '1000 mg', mg: 1000 },
-  { id: 's3', medId: 'tylenol', kind: 'med', ts: noon - 2 * 3600000, dose: '500 mg', mg: 500 },
+  { id: 's1', medId: 'tylenol', kind: 'med', ts: now - 10 * 3600000, dose: '1000 mg', mg: 1000 },
+  { id: 's2', medId: 'tylenol', kind: 'med', ts: now - 9 * 3600000, dose: '1000 mg', mg: 1000 },
+  { id: 's3', medId: 'tylenol', kind: 'med', ts: now - 8 * 3600000, dose: '500 mg', mg: 500 },
   { id: 's4', medId: 'protonix', kind: 'med', ts: now - 30 * 60000, dose: '40 mg', mg: 40 }
 ];
 
@@ -140,15 +144,21 @@ console.log('\n1. THE APP LOADS OVER THE CEILING AND SAYS SO');
     if (!card) return false; card.click(); return true;
   });
   t('a Tylenol dose button was reachable on Home', logged === true);
-  const confirmBtn = page.getByRole('button', { name: 'Confirm', exact: true });
-  await confirmBtn.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-  const confirm = await confirmBtn.count() > 0;
-  if (confirm) await confirmBtn.first().click();
+  const step = async (name) => {
+    const b = page.getByRole('button', { name, exact: typeof name === 'string' });
+    await b.first().waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
+    if (!(await b.count())) return false;
+    await b.last().click();
+    await page.waitForTimeout(700);
+    return true;
+  };
+  const popover = await step(/^Log \d+ mg now$/);
+  const confirm = await step('Confirm');
   await page.waitForTimeout(1600);
   await shot('01-red-banner');
   const b1 = await banner();
   t('the RED acetaminophen ceiling warning is on screen', !!b1 && b1.red,
-    JSON.stringify(b1) + (confirm ? '' : ' (no confirm step)'));
+    JSON.stringify(b1) + ' popover:' + popover + ' confirm:' + confirm);
 }
 
 console.log('\n2. AND AN AMBER TIMING NOTICE DOES NOT REPLACE IT');
@@ -161,9 +171,11 @@ console.log('\n2. AND AN AMBER TIMING NOTICE DOES NOT REPLACE IT');
     return 'none';
   });
   await page.waitForTimeout(900);
-  const c2 = page.getByRole('button', { name: /^(Confirm|Log all)/ });
-  await c2.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-  if (await c2.count()) await c2.first().click();
+  for (const nm of [/^Log all/, 'Confirm']) {
+    const b = page.getByRole('button', { name: nm, exact: typeof nm === 'string' });
+    await b.first().waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
+    if (await b.count()) { await b.last().click(); await page.waitForTimeout(700); }
+  }
   await page.waitForTimeout(1800);
   await shot('02-after-take-all');
   const b2 = await banner();
@@ -184,9 +196,11 @@ console.log('\n3. THE AMBER NOTICE STILL WORKS ON ITS OWN');
     if (b) { b.click(); return true; } return false;
   });
   await page.waitForTimeout(900);
-  const c2 = page.getByRole('button', { name: /^(Confirm|Log all)/ });
-  await c2.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-  if (await c2.count()) await c2.first().click();
+  for (const nm of [/^Log all/, 'Confirm']) {
+    const b = page.getByRole('button', { name: nm, exact: typeof nm === 'string' });
+    await b.first().waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
+    if (await b.count()) { await b.last().click(); await page.waitForTimeout(700); }
+  }
   await page.waitForTimeout(1800);
   await shot('03-amber-alone');
   const b3 = await banner();
@@ -202,14 +216,24 @@ process.exit(fail ? 1 : 0);
 // ---------------------------------------------------------------------------------------------
 // WHERE THIS HARNESS STOPS, AND WHY IT IS COMMITTED UNFINISHED.
 //
-// Sections 2 and 3 have never run. Section 1 cannot get a dose logged, because every route to a
+// UPDATED 2026-09-13, second attempt. Section 1 now logs the dose successfully -- the flow is THREE
+// taps, not two (tap the amount -> a popover reading "Log 1000 mg now" -> a time modal reading
+// "Confirm"), and a selector for either one alone finds nothing at the other step. The fixture also
+// has to clear the ceiling lock AND the four-hour gap lock before the card will open at all, so the
+// seeded doses are 2,500 mg placed eight to ten hours ago.
+//
+// It still does not pass: with the dose logged the red banner is not where `banner()` looks for it.
+// That is the remaining work, and it is one selector, not a mystery.
+//
+// Sections 2 and 3 have never run. The original note follows, and the paragraph below it about
+// WHY this is committed unfinished is the part that still matters:
 // Tylenol dose that would cross the ceiling is itself blocked by the app -- correctly:
 //   * seed the day to 3,000 mg and the card is LOCKED on the ceiling (`used >= max`), so tapping it
 //     opens the override flow, not the dose modal;
 //   * seed it to 2,500 mg and the card is locked on the four-hour GAP instead, because the last
 //     seeded dose has to be recent enough to be today.
-// Exceeding a daily limit in this app REQUIRES the "log anyway" override, by design. The harness
-// has to drive that path, and it does not yet.
+// (That diagnosis was half right: the ceiling lock is real, but seeding BELOW it and clearing the
+// gap reaches the dose modal without needing the override at all.)
 //
 // It is committed rather than deleted because the defect it is written for is real and reproduced by
 // reading the code (see harness-warning-priority-patch.py), and because four earlier versions of
