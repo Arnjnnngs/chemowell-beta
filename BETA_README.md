@@ -6,7 +6,7 @@ collection (`caretracker_test_entries`) — nothing here touches Brandi's real m
 notifications are disabled (`TEST_MODE = true` short-circuits `subscribePush()` and
 `checkNotifications()`).
 
-**Governance:** see `BETA_CLAUDE.md` for the standing rules any contributor (human or AI) must follow in
+**Governance:** see `CLAUDE.md` for the standing rules any contributor (human or AI) must follow in
 this repo — most importantly: never point this app at the real `caretracker_entries` collection. After
 sandbox QA, testing changes may be pushed directly to this repo; any production push still requires
 Aaron's explicit, in-the-moment approval.
@@ -121,7 +121,7 @@ Push notifications are disabled in this build (`TEST_MODE`).
 
 ```
 chemowell-beta/
-├── BETA_CLAUDE.md          # Standing rules for AI/human contributors — read first
+├── CLAUDE.md          # Standing rules for AI/human contributors — read first
 ├── firebase-messaging-sw.js   # FCM service worker, present but unused while TEST_MODE is on
 ├── icon-192.png                # PWA icon (192x192)
 ├── icon-512.png                # PWA icon (512x512)
@@ -261,7 +261,7 @@ When deploying new versions, bump the `CACHE` constant in `sw.js` to match the n
 
 When making changes here, update these docs in the same pass:
 
-- **BETA_CLAUDE.md** — the standing rules file; update if a rule or gotcha changes
+- **CLAUDE.md** — the standing rules file; update if a rule or gotcha changes
 - **BETA_README.md** (this file) — new row in the Version History table (numbered per the versioning
   rule above), and revise any sections affected by the change
 - **BETA_HANDOFF.md** — update "Last updated" and "Current version" at the top, add the new

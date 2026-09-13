@@ -1,6 +1,26 @@
-# BETA_CLAUDE.md — chemowell-beta
+# CLAUDE.md — chemowell-beta
 
 Instructions for any AI agent (Claude, Dispatch, or otherwise) working in this repository.
+
+## RULE 0 — WHO THIS APP IS FOR. Read this before anything else.
+
+**ChemoWell is a product. Every user is a different patient. None of them is the owner's wife.**
+
+This repo shares ancestry with `care-tracker`, which is ONE named person's app. That is correct
+there and wrong here, and the ancestry keeps leaking across. On 2026-09-13 Aaron found the
+medication disclaimer in the sibling app reading **"Follow her care team."** He had already given
+the directive once, on 2026-08-19, and it was not carried out.
+
+**This file used to be called `BETA_CLAUDE.md`, which Claude Code does not auto-load** — so the only
+instruction file a session ever loaded was `care-tracker/CLAUDE.md`, which names the other patient
+throughout. The rename is the fix. Do not rename it back.
+
+The leak takes four shapes: her name (rare), **a gendered pronoun** (write they/them, always), **a
+dose or ceiling from one care plan**, and **behaviour keyed to a medication id**. See
+`chemowell-app-beta/CLAUDE.md` Rule 0 and `HARDCODED_MEDS_PLAN.md` for the full account, and port
+any fix here that applies.
+
+---
 
 ## Renamed, Jul 20, 2026
 

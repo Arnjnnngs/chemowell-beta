@@ -22,7 +22,7 @@
 > `TEST_MODE = false` and a prod cache bump — **only when Aaron explicitly says to.**
 
 > **Purpose:** Complete context for any AI assistant to understand, maintain, and extend this repo
-> without prior knowledge. See `BETA_CLAUDE.md` first for the non-negotiable rules.
+> without prior knowledge. See `CLAUDE.md` first for the non-negotiable rules.
 >
 > **Last updated:** September 11, 2026
 > **Current version:** `beta-v62`, derived from care-tracker **v75** by
@@ -116,7 +116,7 @@ hospital days, and bowel movement/symptom episodes.
 
 ```
 chemowell-beta/
-├── BETA_CLAUDE.md           # Standing rules — read first
+├── CLAUDE.md           # Standing rules — read first
 ├── firebase-messaging-sw.js    # FCM service worker, present but unused (TEST_MODE disables push)
 ├── icon-192.png                # PWA icon 192x192
 ├── icon-512.png                # PWA icon 512x512
@@ -820,7 +820,7 @@ commit to guarantee a byte-exact restore rather than a manual reconstruction), t
 `CACHE` to `caretracker-testing-v53` to force every client (including ones that had cached or
 received the broken version) to pick up the restored app on next load. No app functionality changed
 versus v52 — this is a pure recovery (see the v52 entry below, documented for the first time here
-alongside this incident). **New standing rule, added to Sections 8/9 above and BETA_CLAUDE.md:** never
+alongside this incident). **New standing rule, added to Sections 8/9 above and CLAUDE.md:** never
 paste replacement content into GitHub's inline web editor — always edit locally and push a real diff.
 
 ### v52 — July 19, 2026
@@ -946,7 +946,7 @@ so it is numbered *as* the release it was derived from, prefixed `beta-`.
 
 ## 12. Keeping These Docs Updated
 
-**When you make any change to this repo, update `BETA_CLAUDE.md`, `BETA_README.md`, and this file in the same
+**When you make any change to this repo, update `CLAUDE.md`, `BETA_README.md`, and this file in the same
 pass.** Specifically here: bump "Last updated" / "Current version" above, add a row to Section 10's
 pointer target (TESTING_README's table), and revise any of Sections 4–9 that the change affects. Stale docs
 in this exact repo have already caused real confusion once (see Known Issues #1) and again with the
