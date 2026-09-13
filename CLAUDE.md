@@ -2,23 +2,43 @@
 
 Instructions for any AI agent (Claude, Dispatch, or otherwise) working in this repository.
 
-## RULE 0 — WHO THIS APP IS FOR. Read this before anything else.
+## RULE 0 — THIS REPO IS NOT THE CHEMOWELL PRODUCT. Read this before anything else.
 
-**ChemoWell is a product. Every user is a different patient. None of them is the owner's wife.**
+**Despite its name, `chemowell-beta` is the STAGING COPY OF `care-tracker` — one specific person's
+app.** The evidence is in its own `index.html`: `TEST_MODE = true`, writes to
+`caretracker_test_entries`, `patientName: 'Brandi'` hardcoded at line 1069, and
+`<title>Brandi's Meds / Vitals Historical</title>`. Her name appears five times and that is
+CORRECT here, exactly as it is correct in `care-tracker`. Do not scrub it.
 
-This repo shares ancestry with `care-tracker`, which is ONE named person's app. That is correct
-there and wrong here, and the ancestry keeps leaking across. On 2026-09-13 Aaron found the
-medication disclaimer in the sibling app reading **"Follow her care team."** He had already given
-the directive once, on 2026-08-19, and it was not carried out.
+**The product is `chemowell-app-beta`**, the native app, which was seeded from this repo at v71.
+That is the one where every user is a different patient and where her name, her medications, her
+doses and her care plan must never appear.
 
-**This file used to be called `BETA_CLAUDE.md`, which Claude Code does not auto-load** — so the only
-instruction file a session ever loaded was `care-tracker/CLAUDE.md`, which names the other patient
-throughout. The rename is the fix. Do not rename it back.
+### The naming collision is the root of a real, repeated failure
 
-The leak takes four shapes: her name (rare), **a gendered pronoun** (write they/them, always), **a
-dose or ceiling from one care plan**, and **behaviour keyed to a medication id**. See
-`chemowell-app-beta/CLAUDE.md` Rule 0 and `HARDCODED_MEDS_PLAN.md` for the full account, and port
-any fix here that applies.
+"ChemoWell" currently names two different things: a product (`chemowell-app-beta`) and one patient's
+staging environment (`chemowell-beta`). On 2026-09-13, working from that name alone, I added a
+"ChemoWell is a product, every user is a different patient" rule to THIS file and began treating a
+private test bed as a shared product. Had that gone further it would have scrubbed a staging
+environment whose whole job is to mirror production exactly — which would have made it useless for
+the thing it exists for.
+
+**Anyone reading only the repo name will get this wrong.** Check `TEST_MODE` and `COL_NAME` at the
+top of `index.html` before deciding what kind of repo you are in. Renaming this repo to something
+like `care-tracker-staging` is on Aaron's list as a decision; until he makes it, this section is
+the guard.
+
+### What DOES apply here
+
+1. This is a test bed for a live patient's app. Treat `caretracker_entries` (production) as
+   untouchable — see Hard Rule 1.
+2. When a fix is ported to or from `chemowell-app-beta`, **the product-neutrality rules go with it in
+   one direction only.** A fix travelling there must have her name, her pronouns, her doses and any
+   id-keyed medication rules taken out. A fix travelling here does not need them put back, but it
+   must not assume this repo is a product.
+3. `chemowell-app-beta/CLAUDE.md` Rule 0 and its `test/v75-no-other-patient.mjs` are the product's
+   guard. **Neither belongs in this repo**, and a copy of that test was briefly added here on
+   2026-09-13 and removed again for exactly this reason.
 
 ---
 
