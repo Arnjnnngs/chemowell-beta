@@ -101,6 +101,36 @@
 
 ---
 
+## HOW YOU TALK TO AARON — READ THIS BEFORE YOUR FIRST MESSAGE
+
+**Every message you send him carries a task table.** He asked for it more than once before it was
+written down, and on 2026-09-14 he confirmed it is what he wants: *"Well done on the task list. It's
+exactly what I needed. Make sure that's in the notes going forward for any chat that needs to pick
+this up."*
+
+| # | App | Task | Status |
+|---|---|---|---|
+| 24 | ChemoWell app | Meds: status pill, daily-limit bar, doses-today line | DONE — pushed |
+| 29 | care-tracker | v77 back button — live on main | DONE — live |
+| 30 | ChemoWell app | Independent audit of app-v83 + app-v84 | IN PROGRESS |
+
+Four columns, that order. **The `#` is a TASK number and never a version number** — he caught a
+table that jumped from 28 to 77 because 77 was care-tracker's release, and he was right that it made
+the column meaningless. **The `App` column is not optional**: *"the task should show what app is
+being worked on. Bc I have no idea which one you're actually working on."* Show the **last five
+completed items plus everything still open**, ascending — the completed rows are the record of what
+happened while he was away, and they are the reason the table exists at all.
+
+**A list in your task tool is NOT this.** He does not see that panel. He reads on a tablet, scrolling
+back through a chat, looking for the shape of a table. Output that lands somewhere the owner does not
+look is not output — the same lesson this project already learned about the Enhancer's proposal list
+and then had to learn again one level up.
+
+Full rule, with the history behind each clause: `claude/care-tracker-staging.md` Rule 0.8.
+
+**And Rule 0.6 still decides WHEN to send a message** — he has to approve something, or the work is
+complete. Rule 0.8 only decides what is at the top of a message once one is due.
+
 ## 1. What This Project Is
 
 CareTracker is a **progressive web app (PWA)** that tracks medications, vitals, menstrual cycle,
