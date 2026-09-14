@@ -24,8 +24,19 @@
 > **Purpose:** Complete context for any AI assistant to understand, maintain, and extend this repo
 > without prior knowledge. See `CLAUDE.md` first for the non-negotiable rules.
 >
-> **Last updated:** September 13, 2026
-> **Current version:** `beta-v64`, derived from care-tracker **v75** by
+> **Last updated:** September 14, 2026
+> **Current version:** `beta-v65` — **the phone's own Back button walks the app instead of closing
+> it.** Aaron found it on 2026-09-14; searching this app, production and ChemoWell for any handling
+> of the hardware Back button returned nothing, so it had never been built. Rule 5.5's class: every
+> gate on this project asks about a still frame, and none asks what happens while a finger is
+> moving. Back closes one layer at a time (18 registered here), then goes Home, and leaves only with
+> nothing open, on one press. It writes no record and touches no collection. The registry was read
+> off this file's own state rather than copied from production — staging has no
+> `confirmRemoveWeight`, `missedBannerOpen` or `whatsNewOpen`, and does have the TEST_MODE date
+> panel, which is exempt with its reason. `harness/beta-v65-back-button-patch.py`,
+> `harness/back-button-test.mjs` 14/14, all 10 suites green.
+>
+> Previous: `beta-v64`, derived from care-tracker **v75** by
 > `harness/betaify-patch.py`. **The "prod version + 1" convention below no longer applies** and is
 > left in place only because BETA_README.md and this file's own "Bump the version" recipe still
 > referenced it (both corrected 2026-08-24): since the 2026-08-19 re-staging this
