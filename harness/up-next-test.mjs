@@ -157,6 +157,69 @@ console.log('\n4. WITH EVERY SCHEDULED DOSE LOGGED, IT SAYS SO -- IT DOES NOT FA
   t('no page error', errs.length === 0, errs.join(' | '));
 }
 
+console.log('\n7. A LONG PASTED NAME DOES NOT PUSH HOME SIDEWAYS AT 320px');
+{
+  // BETA-V63 SHIPPED THIS BUG AND THIS SUITE DID NOT SEE IT. `'Go to ' + name` on a width:100%
+  // button with no wrapping rule cannot break a long unbroken name, so the button's min-content
+  // width became the page's: Home measured 334px on a 320px phone and one of the five bottom tabs
+  // went off the side -- the same shape as the app-v75 Home overflow this repo has already paid
+  // for. `harness/med-purpose-test.mjs` caught it after the fact; it belongs here too, on the card
+  // that introduced it.
+  // ONE UNBROKEN 62-CHARACTER RUN, not a phrase. A long name made of ordinary words wraps on its
+  // spaces and never pushes anything sideways, so a fixture built from words tests the button's
+  // height and nothing else. The pasted names that break this app are label text with no spaces.
+  const LONG = 'HydroxyprogesteroneCaproateExtendedReleaseSuspensionIntramuscular Kit';
+  const c = await browser.newContext({ viewport: { width: 320, height: 780 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  await c.route('**/*', route => {
+    const u = route.request().url();
+    if (u.includes('firebase-app.js')) return route.fulfill({ status:200, contentType:'application/javascript', body: SA });
+    if (u.includes('firebase-firestore.js')) return route.fulfill({ status:200, contentType:'application/javascript', body: mkStub([]) });
+    if (u.includes('firebase-messaging.js')) return route.fulfill({ status:200, contentType:'application/javascript', body: SM });
+    if (u.startsWith('http://127.0.0.1:' + PORT)) return route.continue();
+    return route.abort();
+  });
+  const pg = await c.newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+  await pg.addInitScript(({ v, frozen, long }) => {
+    try {
+      localStorage.setItem('caretracker-seen-version', v);
+      // The pasted name goes on Protonix, whose morning window is open at the frozen 10:00, so it
+      // is the medication the hero names -- otherwise the card under test never renders.
+      localStorage.setItem('caretracker-medication-config-v1', JSON.stringify({ version: 1, archivedMeds: [], meds: [
+        { id: 'protonix', name: long, sub: 'Pantoprazole', type: 'win', alerts: true,
+          windows: [{ start: 8, end: 12, name: 'Morning' }], note: 'Twice daily' }
+      ] }));
+    } catch (e) {}
+    const R = Date;
+    const D = function (...a) { return a.length ? new R(...a) : new R(frozen); };
+    D.now = () => frozen; D.parse = R.parse; D.UTC = R.UTC; D.prototype = R.prototype;
+    window.Date = D;
+  }, { v: VER, frozen: FROZEN, long: LONG });
+  await pg.goto('http://127.0.0.1:' + PORT + '/index.html', { waitUntil: 'domcontentloaded' });
+  await pg.waitForTimeout(2600);
+  const m = await pg.evaluate(() => {
+    const hero = document.querySelector('[data-home="up-next"]');
+    const btn = hero && hero.querySelector('button');
+    return {
+      hero: !!hero,
+      heroText: hero ? (hero.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 90) : null,
+      // THE RULER IS THE VIEWPORT WIDTH THIS TEST SET, never window.innerWidth -- under mobile
+      // emulation innerWidth grows with the content and a broken page measures as clean.
+      doc: document.documentElement.scrollWidth,
+      nav: (document.querySelector('nav') || { scrollWidth: -1 }).scrollWidth,
+      btnH: btn ? Math.round(btn.getBoundingClientRect().height) : -1,
+      btnText: btn ? (btn.innerText || '').trim() : null
+    };
+  });
+  t('the hero renders with the pasted name', m.hero && new RegExp('Hydroxyprogesterone').test(String(m.heroText)), String(m.heroText));
+  t('Home does not scroll sideways at 320px', m.doc <= 320, 'page=' + m.doc + 'px');
+  t('and the bottom tab bar still fits', m.nav > 0 && m.nav <= 320, 'nav=' + m.nav + 'px');
+  t('the hero button is one line', m.btnH > 0 && m.btnH <= 60, m.btnH + 'px');
+  t('and a long name falls back to the generic label', m.btnText === 'Show me the card', String(m.btnText));
+  t('no page error at 320px', errs.length === 0, errs.join(' | '));
+  await c.close();
+}
+
 await browser.close();
 server.close();
 console.log('\n' + pass + '/' + (pass + fail) + ' checks passed' + (fail ? '  <-- FAIL' : ''));

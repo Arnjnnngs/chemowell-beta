@@ -1069,7 +1069,7 @@ function renderMedsyncScreen(now) {
 const CONFIG = { patientName: 'Brandi', ceilingMg: 2500, tempUnit: 'Fahrenheit' };
 // v43: index.html carried no version constant. The printable record states which build
 // produced it, and a release check needs one place to compare against sw.js's cache key.
-const APP_VERSION = 'beta-v63'; // derived from care-tracker v60
+const APP_VERSION = 'beta-v64'; // derived from care-tracker v60
 
 // State
 const initialMedicationConfig = loadMedicationConfig();
@@ -1582,11 +1582,21 @@ function setToast(msg) {
 }
 
 function afterLog(entry) {
+  // EVERY WARNING THIS DOSE EARNS, THEN THE WORST ONE.
+  // This used to be a chain of branches each calling setState({ warn }) into a single slot, with the
+  // iron/protonix branch RETURNING before the ceiling check could run. A caregiver who had just been
+  // shown "Acetaminophen ceiling exceeded -- do not give more without contacting the care team", and
+  // who then tapped "Take all" on the evening meds, had that red banner replaced by an amber note
+  // about iron absorption timing. The overdose warning simply left the screen, with nothing to say
+  // it had been there. Which warning she was looking at depended on what she happened to tap next.
   const twoH = 2 * 3600000;
+  const warnings = [];
   if (entry.medId === 'iron' || entry.medId === 'protonix') {
     const other = entry.medId === 'iron' ? 'protonix' : 'iron';
     const near = state.entries.find(e => e.medId === other && e.id !== entry.id && Math.abs(e.ts - entry.ts) <= twoH);
-    if (near) { setState({ warn: { tone: 'amber', title: 'Iron + Protonix timing', body: 'Iron and Protonix were logged within 2 hours of each other. Protonix (a PPI) lowers stomach acid, which can markedly reduce iron absorption. Aim to separate the two by at least 2 hours.' } }); return; }
+    // NO `return` HERE. That return is half the defect: it meant an iron dose could never also
+    // report a ceiling, and that this amber always won whatever was already on screen.
+    if (near) warnings.push({ tone: 'amber', title: 'Iron + Protonix timing', body: 'Iron and Protonix were logged within 2 hours of each other. Protonix (a PPI) lowers stomach acid, which can markedly reduce iron absorption. Aim to separate the two by at least 2 hours.' });
   }
   if (entry.medId === 'tylenol' || entry.medId === 'tylenol-liquid') {
     const mg = tylenolMg();
@@ -1600,19 +1610,34 @@ function afterLog(entry) {
       volOver = !!(liquidMed && liquidMed.volumeCeilingMl && vol > liquidMed.volumeCeilingMl);
     }
     if (mgOver && volOver) {
-      setState({ warn: { tone: 'red', title: 'Acetaminophen ceiling exceeded', body: "Today's Tylenol total is " + mg.toLocaleString() + " mg (above the " + limit.toLocaleString() + " mg daily limit) and Tylenol Liquid volume is " + vol + " mL (above the " + liquidMed.volumeCeilingMl + " mL daily limit). Do not give more without contacting the care team." } });
+      warnings.push({ tone: 'red', title: 'Acetaminophen ceiling exceeded', body: "Today's Tylenol total is " + mg.toLocaleString() + " mg (above the " + limit.toLocaleString() + " mg daily limit) and Tylenol Liquid volume is " + vol + " mL (above the " + liquidMed.volumeCeilingMl + " mL daily limit). Do not give more without contacting the care team." });
     } else if (mgOver) {
-      setState({ warn: { tone: 'red', title: 'Acetaminophen ceiling exceeded', body: "Today's Tylenol total is " + mg.toLocaleString() + " mg, above the " + limit.toLocaleString() + " mg daily limit. Do not give more without contacting the care team." } });
+      warnings.push({ tone: 'red', title: 'Acetaminophen ceiling exceeded', body: "Today's Tylenol total is " + mg.toLocaleString() + " mg, above the " + limit.toLocaleString() + " mg daily limit. Do not give more without contacting the care team." });
     } else if (volOver) {
-      setState({ warn: { tone: 'red', title: 'Tylenol Liquid volume ceiling exceeded', body: "Today's Tylenol Liquid total is " + vol + " mL, above the " + liquidMed.volumeCeilingMl + " mL daily limit. Do not give more without contacting the care team." } });
+      warnings.push({ tone: 'red', title: 'Tylenol Liquid volume ceiling exceeded', body: "Today's Tylenol Liquid total is " + vol + " mL, above the " + liquidMed.volumeCeilingMl + " mL daily limit. Do not give more without contacting the care team." });
     }
   } else {
+    // NO LONGER AN `else` ON THE IRON BRANCH. It was one before, so a medication that is neither
+    // tylenol nor iron reached its own configured ceiling check, but iron itself never did -- iron
+    // has no ceiling today, which is the only reason that did not already matter.
     const configuredMedication = state.meds.find(med => med.id === entry.medId);
     const configuredLimit = dailyCeiling(configuredMedication);
     if (configuredLimit && configuredLimit.used > configuredLimit.max) {
-      setState({ warn: { tone: 'red', title: configuredMedication.name + ' daily limit exceeded', body: "Today's " + configuredMedication.name + ' total is ' + configuredLimit.used + ' ' + configuredLimit.unit + ', above the ' + configuredLimit.label + ' daily limit. Do not give more without contacting the care team.' } });
+      warnings.push({ tone: 'red', title: configuredMedication.name + ' daily limit exceeded', body: "Today's " + configuredMedication.name + ' total is ' + configuredLimit.used + ' ' + configuredLimit.unit + ', above the ' + configuredLimit.label + ' daily limit. Do not give more without contacting the care team.' });
     }
   }
+
+  if (!warnings.length) return;
+  const worst = warnings.find(w => w.tone === 'red') || warnings[0];
+  // AN AMBER NEVER DISPLACES A RED THE CAREGIVER IS STILL LOOKING AT. The red banner stays until
+  // she taps the x on it, and while an overdose warning is on the screen it is the thing she has to
+  // deal with -- a note about iron absorption timing is not a reason to take it away. A red may
+  // still replace a red: the newer figure is the one that matters. This is deliberately checked
+  // against what is ON SCREEN and not against a per-batch flag, because the reported failure
+  // crosses taps: the red came from a Tylenol dose and the amber from a later "Take all".
+  if (state.warn && state.warn.tone === 'red' && worst.tone !== 'red') return;
+  setState({ warn: worst });
+
 }
 
 async function logMed(medId, dose, opts) {
@@ -1713,7 +1738,10 @@ async function confirmTimeAndLog() {
       await addEntryDB(en);
     }
     setToast(ids.length + ' meds logged at ' + fmtTime(ts));
-    setTimeout(() => { if (ids.includes('iron')) afterLog({ medId: 'iron', ts, id: 'pending' }); }, 500);
+    // EVERY MEDICATION IN THE BATCH, not just iron. `if (ids.includes('iron'))` meant a "Take all"
+    // that pushed something over its own configured daily limit raised no warning whatsoever,
+    // because the only medication the batch ever asked about was iron.
+    setTimeout(() => { ids.forEach(mid => afterLog({ medId: mid, ts, id: 'pending' })); }, 500);
   } else if (m.type === 'marker') {
     setState({ timeModal: null });
     await addEntryDB({ medId: m.medId, dose: null, mg: 0, ts });
@@ -2998,12 +3026,12 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
   if (bannerItems.length) {
     parts.push(h('div', { style: { background: 'rgba(192,69,59,0.16)', border: '2px solid #C0453B', borderRadius: '16px', padding: '15px 16px', display: 'flex', gap: '12px', alignItems: 'flex-start', boxShadow: '0 4px 24px rgba(192,69,59,0.25)' } },
       h('span', { style: { flexShrink: '0', width: '28px', height: '28px', borderRadius: '50%', background: '#C0453B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '17px' } }, '!'),
-      h('div', { style: { flex: '1' } },
+      h('div', { style: { flex: '1', minWidth: '0' } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '4px' } },
           h('div', { style: { fontWeight: '800', color: '#C0453B', fontSize: '15.5px', letterSpacing: '0.02em', textTransform: 'uppercase' } }, 'Missed dose' + (bannerItems.length > 1 ? 's' : '')),
           h('button', { onClick: clearMissedDoses, 'data-missed-clear': 'true', style: { flexShrink: '0', minHeight: '30px', padding: '0 12px', borderRadius: '99px', background: 'rgba(192,69,59,0.14)', border: '1px solid rgba(192,69,59,0.4)', color: '#A13830', fontSize: '11.5px', fontWeight: '800' } }, 'Clear')
         ),
-        h('div', { style: { color: '#A13830', fontSize: '14px', fontWeight: '600', lineHeight: '1.5' } },
+        h('div', { style: { color: '#A13830', fontSize: '14px', fontWeight: '600', lineHeight: '1.5', overflowWrap: 'anywhere' } },
           bannerItems.map(m => m.when + ': ' + nameOf(m.medId) + ' — ' + m.windowName + ' window (' + fmtTime(m.ts) + ') closed with no dose logged').join(' · '))
       )
     ));
@@ -3311,8 +3339,8 @@ function renderToday(now, mg, pct, tyColor, ceiling) {
             )
           ) : null
         ),
-        h('button', { onClick: () => scrollToMedCard(nx.med.id), style: { marginTop: '15px', width: '100%', minHeight: '48px', borderRadius: '14px', border: '0', background: '#FFFFFF', color: '#8E3D61', fontSize: '16px', fontWeight: '800', boxShadow: '0 3px 10px rgba(0,0,0,0.14)' } },
-          nx.openNow ? 'Go to ' + nx.med.name : 'Show me the card')
+        h('button', { onClick: () => scrollToMedCard(nx.med.id), style: { marginTop: '15px', width: '100%', minHeight: '48px', padding: '0 14px', borderRadius: '14px', border: '0', background: '#FFFFFF', color: '#8E3D61', fontSize: '16px', fontWeight: '800', boxShadow: '0 3px 10px rgba(0,0,0,0.14)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+          (nx.openNow && String(nx.med.name).length <= 22) ? ('Go to ' + nx.med.name) : 'Show me the card')
       ));
     } else if (prog.scheduled > 0 && prog.taken >= prog.scheduled) {
       // A screen that answers "what is next" by going blank looks broken at the moment it should
