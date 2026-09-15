@@ -25,7 +25,12 @@
 > without prior knowledge. See `CLAUDE.md` first for the non-negotiable rules.
 >
 > **Last updated:** September 14, 2026
-> **Current version:** `beta-v65` — **the phone's own Back button walks the app instead of closing
+> **Current version:** `beta-v66` — **the password box on a password-protected backup can be typed
+> in.** `onInput` on `#bk-unlock-pw` called `setState`, which ends in an unconditional `render()`,
+> and this app's `render()` does not restore focus — so every keystroke destroyed the box being
+> typed into, one character per tap, on the screen that restores an encrypted backup. Ported from
+> production's v78 where it was found; nothing about it is patient-specific. Before that, in
+> `beta-v65` — **the phone's own Back button walks the app instead of closing
 > it.** Aaron found it on 2026-09-14; searching this app, production and ChemoWell for any handling
 > of the hardware Back button returned nothing, so it had never been built. Rule 5.5's class: every
 > gate on this project asks about a still frame, and none asks what happens while a finger is
