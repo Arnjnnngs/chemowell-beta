@@ -207,14 +207,41 @@ promoted to the app Brandi's caregiver actually relies on.
   tracking, a pain-level (1–10) scale on Morphine logs, and Zofran treated as a plain as-needed med
   (no gap timer, no reminders). Confirm feature parity/divergence against prod before promoting
   anything — don't assume the two `index.html` files are close to each other structurally.
-- **Versioning matches prod, offset ahead.** This repo's version number is always
-  `(current live/pushed prod version) + 1` while testing is ahead of production — e.g. if prod is
-  live at v27, testing is v28, and the next testing change becomes v29, and so on, until those
-  features are promoted to prod and prod catches up. Do NOT use a separate "tN" counter — check
-  the *actual pushed* `care-tracker` repo's `sw.js`/README (not any local unpushed copy) before
-  assigning the next testing version number, since prod may have moved since this repo was last
-  touched. Service worker cache name here is `caretracker-testing-vN` using that same number
-  (e.g. `caretracker-testing-v29`), not a separate testing-only counter.
+- **Versioning: this repo has its own counter, and the rule that said otherwise had been dead for
+  months.** *(Rewritten 2026-09-15 after checking it against the actual history rather than
+  re-reading it.)*
+
+  **What this section used to say:** the version here is always `(current live prod version) + 1`,
+  the cache is `caretracker-testing-vN` using that same number, and *"do NOT use a separate 'tN'
+  counter"*. **Every clause of that is false of this repo and has been through three different
+  schemes.** Staging is at `beta-v66` against a production live at **v77** — eleven behind the
+  number the rule demands, not one ahead — and the cache reads `chemowell-beta-v66`, not
+  `caretracker-testing-v67`. A rule nobody has followed since July is not a rule; it is a trap for
+  the next person who obeys it and renumbers a live staging app to match.
+
+  **What actually happened**, from `BETA_README.md`'s own table:
+  1. Up to `v71` (Jul 23) the number DID track production and the cache was `caretracker-testing-vN`.
+     The v71 rebrand renamed the cache to `chemowell-beta-v71`.
+  2. `beta-v59` (Aug 24) re-staged from production v59 after seven releases of drift and adopted
+     `beta-v<the prod version it was staged from>` — so the number went DOWN, deliberately.
+  3. From `beta-v61` the coupling broke for good: it was built when prod was at v74. Since then
+     `beta-vN` has been this repo's own sequential counter and nothing else.
+
+  **The rule now, which is the practice written down:**
+  * `APP_VERSION` is `beta-vN`, N incrementing by one per release here. It is NOT derived from
+    production's number and must never be renumbered to match it.
+  * `sw.js` CACHE is `chemowell-beta-vN` with the same N. (It keeps the repo's current name even
+    after the rename below; the cache name is a cache key, not a URL, and churning it renames
+    nothing and re-downloads everything.)
+  * **The information the old rule existed for is carried by the table's third column instead**, and
+    that is the part worth enforcing: every row in `BETA_README.md`'s version history names the
+    `care-tracker` version and the ChemoWell `app-v` version it corresponds to. That is what tells a
+    reader whether staging is ahead of production and by what — which the version number itself
+    stopped saying in August.
+  * **That column was silently dropped from `beta-v65` and `beta-v66`** (their prose sat in it, and
+    the Status cell was missing entirely). Both are repaired. A row without it is incomplete: fill
+    it in from the *actual pushed* `care-tracker` and `chemowell-app-beta` repos, not from a local
+    unpushed copy, because both move while this one sits.
 
 ## Working with Aaron — browser tab hygiene
 
