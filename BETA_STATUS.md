@@ -108,6 +108,41 @@ Controls sit at the top of Home under the banner: a date picker, ±1 day, and To
 
 ## TEST RESULTS
 
+### `weight-axis-test.mjs` — **69/69**, and it does something the product app's suite cannot
+
+Added for `beta-v67` (the weight chart's x-axis). **It freezes the clock** rather than running
+against the wall clock: `window.Date` is overridden per section, the way
+`warning-priority-test.mjs` already does it here. Every fixture then states the hour it means.
+
+That is not tidiness. In `chemowell-app-beta` the equivalent suite runs on the real clock and moves
+the app's date in whole DAYS through a test hook — and because the simulated clock keeps the real
+time of day, one section was true only after 09:00 local. It went red on correct code for nine
+hours of every day, and it was the **only** section that killed one of the mutants. Three audit
+rounds to find.
+
+**And the frozen clock reaches a case that suite cannot reach at all.** `timeAxisLabels()` decides
+"same day" with `setHours`, i.e. in the caregiver's own zone. A build using `setUTCHours` answers a
+different question and passes every fixture whose span sits inside one UTC day. Section 7 freezes
+the clock at 00:30 with a reading at 23:00 the evening before: under `TZ=America/Chicago` that span
+crosses local midnight and **not** UTC midnight, and the `setUTCHours` build prints
+`["11:00 PM","11:22 PM","11:45 PM","12:07 AM","12:30 AM"]` where two dates are needed. That build
+survived BOTH Zero Day Audit passes of the product app, whose own backlog (M31) calls it
+unreachable there. **It is unreachable with a wall clock, not unreachable.** Porting the frozen
+clock back is the fix for M31.
+
+Five mutants, all dead: the old `tMax` floor **7 red**, the old always-`M/D` labels **8 red**,
+`pad.right` back to 20 **1 red**, `setUTCHours` **1 red**, every other label dropped **9 red**.
+**Two of those are pinned by a single check each and that is worth knowing before anyone edits
+them:** only section 2 draws a wide label at the right edge, so only section 2 can see the margin;
+only section 7 crosses local midnight.
+
+Run it as `TZ=America/Chicago node harness/weight-axis-test.mjs`. Under UTC it is still 69/69, but
+section 7 is then a plain cross-midnight case rather than a discriminating one — local and UTC
+midnight are the same instant in this container, and the suite prints the zone it ran under so that
+cannot be mistaken for coverage it does not have.
+
+---
+
 `beta-isolation-test.mjs` — **9/9**, and falsified:
 - Flipping `TEST_MODE` to `false` turns **5 checks red**, including live collections being read
   and a dose being written to live data.
