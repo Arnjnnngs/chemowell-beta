@@ -1069,7 +1069,7 @@ function renderMedsyncScreen(now) {
 const CONFIG = { patientName: 'Brandi', ceilingMg: 2500, tempUnit: 'Fahrenheit' };
 // v43: index.html carried no version constant. The printable record states which build
 // produced it, and a release check needs one place to compare against sw.js's cache key.
-const APP_VERSION = 'beta-v66'; // derived from care-tracker v60
+const APP_VERSION = 'beta-v67'; // this repo's own counter -- see BETA_README's versioning rule
 
 // State
 const initialMedicationConfig = loadMedicationConfig();
@@ -4260,7 +4260,7 @@ function renderReportsMenu(now) {
     h('div', { 'data-tour-reports': 'true', style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
       ...reportTypes.map(type => {
         const report = reportDescriptor(type, now);
-        return h('button', { onClick: () => openReport(type), style: { width: '100%', minHeight: '92px', display: 'flex', alignItems: 'center', gap: '13px', padding: '14px', textAlign: 'left', borderRadius: '18px', background: 'rgba(255,255,255,0.63)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(212,104,138,0.16)', color: '#342530', boxShadow: '0 4px 18px rgba(180,130,150,0.09), inset 0 1px 0 rgba(255,255,255,0.75)' } },
+        return h('button', { 'data-report': type, onClick: () => openReport(type), style: { width: '100%', minHeight: '92px', display: 'flex', alignItems: 'center', gap: '13px', padding: '14px', textAlign: 'left', borderRadius: '18px', background: 'rgba(255,255,255,0.63)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(212,104,138,0.16)', color: '#342530', boxShadow: '0 4px 18px rgba(180,130,150,0.09), inset 0 1px 0 rgba(255,255,255,0.75)' } },
           h('span', { style: { width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(170,83,117,0.12)', color: '#AA5375', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0' } }, appIcon(report.icon, 22)),
           h('span', { style: { display: 'block', flex: '1', minWidth: '0' } },
             h('span', { style: { display: 'block', fontSize: '16px', fontWeight: '800', letterSpacing: '-0.015em' } }, report.label),
@@ -6858,6 +6858,90 @@ function renderParacentesis(now) {
   return [stats, note, rows];
 }
 
+// ============================================================================================
+// PORTED FROM chemowell-app-beta app-v90 (2026-11-03). Aaron: "chart x-axes repeat dates and
+// run into the future". THIS REPO HAS ONE CHART, NOT TWO -- the weight trend -- and it carried
+// BOTH halves of the defect at the two sites below. The product app had the same six lines in a
+// temperature chart as well, which is why the fix is written as shared helpers there; it is kept
+// in that shape here so the two files stay diffable and the next port is a copy, not a rewrite.
+//
+// The comments below are the product app's own, unchanged on purpose: they are the record of what
+// was tried and rejected, and three Zero Day Audit passes are behind them. `test/v90-chart-axes`
+// in that repo is 162 checks against this exact logic.
+// ============================================================================================
+// ONE TIME AXIS, FOR BOTH CHARTS. (app-v90, Aaron: "chart x-axes repeat dates and run into the
+// future".) Both halves of that report came from six lines that existed TWICE -- in the
+// temperature chart and in the weight chart -- so the fix is written once and called twice. Two
+// copies of a rule is one copy too many; this project has the scar from bowel values and from the
+// Help enumerations.
+//
+// WHY THE FORMAT IS CHOSEN FROM THE SPAN. The labels were always M/D, so a span shorter than a few
+// days put the same calendar day under four or five ticks: "10/31 10/31 10/31 11/1 11/1". Over a
+// few hours the DATE is not what varies and printing it says nothing; the time is.
+//
+// WHY NOT CALENDAR BOUNDARIES. Ticking on midnights would make repeats impossible by construction,
+// and it was rejected: it moves the end labels off the data, so a ten-day chart would open before
+// the first reading and end after the last, and a span under a day has no interior midnight at all
+// and degenerates to one tick or none. Keeping the ticks on the data and fixing the FORMAT answers
+// both symptoms without changing what the axis means.
+//
+// The de-duplication is belt and braces on top of that: six days across seven ticks still collides
+// whatever the format, and dropping a label identical to the one before it is always right.
+const AXIS_HOUR = 3600000, AXIS_DAY = 86400000;
+function timeAxisLabels(tMin, tMax, count, x) {
+  const span = Math.max(tMax - tMin, 1);
+  // A TIME IS ONLY UNAMBIGUOUS INSIDE ONE CALENDAR DAY, and the first version of this got it
+  // wrong: it chose times for any span under two days, so a chart from yesterday morning to this
+  // morning read "9 AM, 3 PM, 9 PM, 3 AM, 9 AM" -- the same label twice, twenty-four hours apart,
+  // which is both a repeat and a lie about which reading is which. Its own suite caught it.
+  //
+  // So the question is not how LONG the span is, it is whether it crosses midnight. Within a day
+  // the date never varies and the time is the whole story; across days the reverse. Dates are
+  // monotonic -- but NOT free of duplicates at distance, because M/D carries no year: two
+  // readings 730 days apart render "7/25, 1/24, 7/25, 1/24, 7/25". An earlier version of this
+  // comment reasoned that duplicates must therefore be adjacent and de-duplicated only against
+  // the previous label, which was true below a year and wrong above it. The de-duplication is
+  // global now. Times within one day are strictly increasing and cannot collide at all.
+  // AND A SPAN OVER A YEAR IS REACHABLE, which an earlier version of this comment flatly denied.
+  // It claimed the UI can only ask for 28 or 90 days (`spanDays`) and that no label could
+  // therefore be ambiguous about its year. False: when EVERY reading is older than the window,
+  // `renderWeightTrend` falls back to `weightEntries.slice(-2)` with no bound at all on how far
+  // apart those two readings are. Measured at a 365-day span, global de-duplication did not just
+  // leave an ambiguous label -- it DROPPED one, and the one it dropped was the tick sitting under
+  // the most recent reading. So the year is printed once the span passes ~300 days, which is what
+  // that same comment said the right fix was in the sentence before it declined to do it.
+  const dayOf = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const sameDay = dayOf(tMin) === dayOf(tMax);
+  const fmt = sameDay
+    ? (span < 3 * AXIS_HOUR
+        ? (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        : (d) => d.toLocaleTimeString([], { hour: 'numeric' }))
+    : (span > 300 * AXIS_DAY
+        ? (d) => (d.getMonth() + 1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2)
+        : (d) => (d.getMonth() + 1) + '/' + d.getDate());
+  const out = [], seen = new Set();
+  for (let i = 0; i <= count; i++) {
+    const ts = tMin + (span / count) * i;
+    const label = fmt(new Date(ts));
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push({ label: label, px: x(ts) });
+  }
+  return out;
+}
+// THE RIGHT EDGE OF A CHART IS NEVER LATER THAN NOW. The old floor was `tMin + DAY`, so a day
+// holding a single reading drew an axis labelled with TOMORROW. simNow() rather than Date.now()
+// because the TEST_MODE date override has to move the axis too.
+//
+// Math.max(lastTs, ...) is load-bearing in the one direction that matters: the data always fits.
+// If a reading is somehow later than "now" -- a simulated future date -- the axis still reaches it
+// rather than cropping a reading out of the chart.
+// `now` is passed in rather than read again: every caller already holds the one the rest of the
+// chart was built from, and calling simNow() here would put two clocks in one drawing.
+function chartTimeMax(tMin, lastTs, now) {
+  return Math.max(lastTs, Math.min(tMin + AXIS_DAY, now));
+}
+
 function renderWeightTrend(now) {
   const weightEntries = state.entries.filter(e => e.medId === 'weight' && e.weight).sort((a, b) => a.ts - b.ts);
   const range = state.weightRange;
@@ -6865,8 +6949,8 @@ function renderWeightTrend(now) {
 
   // Range toggle
   const toggle = h('div', { style: { display: 'flex', gap: '5px', background: 'rgba(255,255,255,0.45)', borderRadius: '10px', padding: '3px', border: '1px solid rgba(212,104,138,0.12)', alignSelf: 'flex-start' } },
-    h('button', { onClick: () => setState({ weightRange: 'weeks' }), style: { padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: range === 'weeks' ? '#9B5B8A' : 'transparent', color: range === 'weeks' ? '#fff' : '#7D6974' } }, 'Weeks'),
-    h('button', { onClick: () => setState({ weightRange: 'months' }), style: { padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: range === 'months' ? '#9B5B8A' : 'transparent', color: range === 'months' ? '#fff' : '#7D6974' } }, 'Months')
+    h('button', { 'data-weight-range': 'weeks', onClick: () => setState({ weightRange: 'weeks' }), style: { padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: range === 'weeks' ? '#9B5B8A' : 'transparent', color: range === 'weeks' ? '#fff' : '#7D6974' } }, 'Weeks'),
+    h('button', { 'data-weight-range': 'months', onClick: () => setState({ weightRange: 'months' }), style: { padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', background: range === 'months' ? '#9B5B8A' : 'transparent', color: range === 'months' ? '#fff' : '#7D6974' } }, 'Months')
   );
 
   if (weightEntries.length === 0) {
@@ -6898,12 +6982,16 @@ function renderWeightTrend(now) {
   const maxW = Math.ceil(Math.max(...weights) + 2);
   const wRange = maxW - minW || 4;
   const tMin = points[0].ts;
-  const tMax = Math.max(points[points.length - 1].ts, tMin + DAY);
+  const tMax = chartTimeMax(tMin, points[points.length - 1].ts, now);
   const tRange = tMax - tMin || DAY;
 
   // SVG dimensions
   const W = 680, H = 300;
-  const pad = { top: 30, right: 20, bottom: 50, left: 55 };
+  // right: 34, not 20. A date label is "10/31" -- 18 units wide in this 11px monospace -- but a
+  // TIME label is "10:36 PM" at 29, and the rightmost one is centred on the right edge, so at 20
+  // it rendered clipped as "10:09 P". Measured from the text metrics, asserted by the suite in
+  // chemowell-app-beta, not eyeballed.
+  const pad = { top: 30, right: 34, bottom: 50, left: 55 };
   const cW = W - pad.left - pad.right;
   const cH = H - pad.top - pad.bottom;
 
@@ -6931,15 +7019,9 @@ function renderWeightTrend(now) {
     yLabels.push({ val: Math.round(val * 10) / 10, py: y(val) });
   }
 
-  // X-axis labels (dates)
-  const xLabels = [];
+  // X-axis labels -- dates OR times, decided by the span. See timeAxisLabels() above.
   const labelCount = range === 'weeks' ? 4 : 6;
-  for (let i = 0; i <= labelCount; i++) {
-    const ts = tMin + (tRange / labelCount) * i;
-    const d = new Date(ts);
-    const label = (d.getMonth() + 1) + '/' + d.getDate();
-    xLabels.push({ label, px: x(ts) });
-  }
+  const xLabels = timeAxisLabels(tMin, tMax, labelCount, x);
 
   // Stats
   const latest = points[points.length - 1];
@@ -6958,7 +7040,7 @@ function renderWeightTrend(now) {
   });
   // X labels
   xLabels.forEach(xl => {
-    svg += '<text x="' + xl.px.toFixed(1) + '" y="' + (H - 10) + '" fill="#7D6974" font-size="11" font-family="IBM Plex Mono,monospace" text-anchor="middle">' + xl.label + '</text>';
+    svg += '<text data-xaxis="1" x="' + xl.px.toFixed(1) + '" y="' + (H - 10) + '" fill="#7D6974" font-size="11" font-family="IBM Plex Mono,monospace" text-anchor="middle">' + xl.label + '</text>';
   });
   // Area gradient
   svg += '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(155,91,138,0.25)"/><stop offset="100%" stop-color="rgba(155,91,138,0)"/></linearGradient></defs>';
