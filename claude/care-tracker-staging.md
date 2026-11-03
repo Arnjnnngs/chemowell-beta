@@ -1,3 +1,17 @@
+> # ⛔ PRODUCTION (`care-tracker`) IS CLOSED. DO NOT PROMOTE ANYTHING TO IT.
+>
+> **Brandi passed away on 18 September 2026. Aaron, 3 November 2026:** *"That app and its data is
+> to be frozen… that app is not to be touched whatsoever."*
+>
+> This repo is that app's staging copy, so it is the most likely place for someone to be told to
+> "promote this to production". **There is no promotion path any more.** Every rule below that
+> describes pushing to `care-tracker`, or asking Aaron for a go-ahead to do so, is a historical
+> record and not a work order. The full notice is at the top of `care-tracker/CLAUDE.md`.
+>
+> This repository itself is unaffected — it holds fabricated test data and nobody's medical
+> record — but nothing here travels to production without Aaron asking for it in his own words,
+> in the moment.
+
 # care-tracker STAGING — the instructions themselves
 
 Instructions for any AI agent (Claude, Dispatch, or otherwise) working in this repository.
