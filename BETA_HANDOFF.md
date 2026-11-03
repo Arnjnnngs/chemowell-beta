@@ -24,8 +24,19 @@
 > **Purpose:** Complete context for any AI assistant to understand, maintain, and extend this repo
 > without prior knowledge. See `CLAUDE.md` first for the non-negotiable rules.
 >
-> **Last updated:** September 14, 2026
-> **Current version:** `beta-v66` — **the password box on a password-protected backup can be typed
+> **Last updated:** November 3, 2026
+> **Current version:** `beta-v67` — **the weight chart's x-axis repeated dates and ran into the
+> future.** Ported from ChemoWell app-v90, where Aaron reported it. Both halves were here too and
+> both came from the same six lines: `tMax` floored at `tMin + DAY`, so a day with one reading
+> labelled the axis with tomorrow; and labels always `M/D`, so a span of hours printed one date
+> under five ticks. The right edge is clamped to the caregiver's `now`, the format is chosen from
+> whether the span crosses midnight, and the year is printed past ~300 days because
+> `weightEntries.slice(-2)` makes a span that long reachable. `pad.right` 20 → 34 so a time label
+> is not clipped. Written as shared helpers (`timeAxisLabels`, `chartTimeMax`) although this repo
+> has one chart, so the three files stay diffable. `harness/weight-axis-test.mjs` 69/69, clock
+> FROZEN rather than wall-clock — which also reaches a local-vs-UTC midnight case the product
+> app's suite cannot. Nothing patient-specific in either direction. Before that, in
+> `beta-v66` — **the password box on a password-protected backup can be typed
 > in.** `onInput` on `#bk-unlock-pw` called `setState`, which ends in an unconditional `render()`,
 > and this app's `render()` does not restore focus — so every keystroke destroyed the box being
 > typed into, one character per tap, on the screen that restores an encrypted backup. Ported from

@@ -201,9 +201,17 @@ console.log('\n=== 1. One reading at 09:00, clock frozen at 14:00');
 
 // --- 2. THREE READINGS INSIDE ONE HOUR. Under three hours the hour alone repeats, so the minute
 //        has to be printed.
-console.log('\n=== 2. Three readings 08:00-08:50, clock frozen at 09:10');
+//
+//        AND THE CLOCK IS SET TO THE EVENING ON PURPOSE, which is the only reason this section
+//        catches the padding. The widest label the axis can draw is a two-digit hour with minutes
+//        and a meridiem -- "10:36 PM", 29 units in this 11px monospace against 18 for a date --
+//        and the rightmost label is CENTRED on the right edge, so it is the one that gets clipped.
+//        A morning fixture ending at "9:10 AM" is a narrower label and leaves the margin untested:
+//        with pad.right back at 20, the morning version of this section passed and the evening one
+//        fails by 3.2 units. The worst case is the only case worth measuring a margin against.
+console.log('\n=== 2. Three readings 21:30-22:20, clock frozen at 22:36 (the widest label there is)');
 {
-  const r = await axisAt(atToday(9, 10), [wt(atToday(8, 0), 160), wt(atToday(8, 20), 161), wt(atToday(8, 50), 160.5)]);
+  const r = await axisAt(atToday(22, 36), [wt(atToday(21, 30), 160), wt(atToday(21, 50), 161), wt(atToday(22, 20), 160.5)]);
   t('2.0  precondition: the chart rendered an axis', r.labels.length >= 2, JSON.stringify(r.labels));
   t('2.1  a span inside one hour is labelled with minutes, not bare hours',
     r.labels.length >= 2 && r.labels.every(L => /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(L)), JSON.stringify(r.labels));
